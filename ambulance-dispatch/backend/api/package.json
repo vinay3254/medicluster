@@ -29,7 +29,7 @@
     "express-rate-limit": "^7.1.5",
     "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
-    "joi": "^17.11.0",
+    "joi": "^17.13.8",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.23.1",
     "morgan": "^1.10.0",
