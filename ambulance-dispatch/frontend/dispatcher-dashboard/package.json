@@ -17,7 +17,7 @@
     "@mui/material": "^7.3.9",
     "@react-google-maps/api": "^2.20.8",
     "@supabase/supabase-js": "^2.112.3",
-    "axios": "^1.14.0",
+    "axios": "^1.20.0",
     "date-fns": "^4.1.0",
     "leaflet": "^1.9.4",
     "maplibre-gl": "^6.4.0",
