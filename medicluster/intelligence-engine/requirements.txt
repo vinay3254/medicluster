@@ -9,7 +9,7 @@ pillow==13.0.0
 torch==2.6.0
 torchvision==0.21.0
 medim==0.1.2
-monai==1.5.2
+monai==1.6.0
 torchio==1.2.1
 chronos-forecasting==2.3.2
 transformers==5.20.2
