@@ -6,7 +6,7 @@ scipy==1.18.1
 nibabel==5.4.2
 scikit-image==0.26.0
 pillow==13.0.0
-torch==2.6.0
+torch==2.13.0
 torchvision==0.21.0
 medim==0.1.2
 monai==1.5.2
