@@ -13,7 +13,7 @@ torchvision==0.17.1
 
 # Medical imaging models (chest X-ray pathology detection)
 torchxrayvision==1.0.1
-Pillow==10.2.0
+Pillow==13.0.0
 
 # DICOM file support (real hospital files)
 pydicom
