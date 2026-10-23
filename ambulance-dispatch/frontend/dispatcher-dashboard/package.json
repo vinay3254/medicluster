@@ -27,7 +27,8 @@
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.14.0",
     "recharts": "^3.8.1",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "three": "0.186.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

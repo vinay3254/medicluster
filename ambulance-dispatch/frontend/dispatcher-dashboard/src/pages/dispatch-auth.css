@@ -1,0 +1,69 @@
+/* Dispatcher sign-in matches the full-page MediCluster authentication layout. */
+.dc-auth-shell { display: grid; min-height: 100dvh; background: #fff; color: #0e1205; font-family: WorkspaceSans,Arial,sans-serif; }
+.dc-auth-layout { display: grid; grid-template-columns: 1.05fr 1fr; width: 100%; min-height: 100dvh; background: #fff; }
+.dc-auth-botanical { position: relative; min-width: 0; min-height: 700px; overflow: hidden; background: #e9ebe3; }
+.dc-auth-botanical > img { display: block; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.dc-auth-chip { position: absolute; display: inline-flex; align-items: center; gap: 16px; border-radius: 40px; background: #fffffff2; padding: 5px 5px 5px 17px; font-size: 13px; color: #0e1205; box-shadow: 0 3px 15px #21300e08; }
+.dc-auth-chip i { display: grid; place-items: center; width: 28px; height: 28px; font-size: 23px; line-height: 1; border-radius: 50%; background: #d9d733; color: #3d4216; font-style: normal; }
+.dc-auth-chip-one { top: 9%; left: 8%; }
+.dc-auth-chip-two { top: 43%; left: 6%; }
+.dc-auth-chip-three { bottom: 29%; right: 6%; padding: 5px 17px 5px 5px; }
+.dc-auth-layout > main { display: flex; flex-direction: column; padding: 40px clamp(32px,4vw,80px) 28px; min-width: 0; }
+.dc-auth-topline { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+.dc-auth-brand { display: inline-flex; align-items: center; gap: 9px; color: #0e1205; font-size: 22px; letter-spacing: -.055em; line-height: 1; text-decoration: none; }
+.dc-auth-brand svg { width: 21px; height: 21px; }
+.dc-auth-brand svg rect:last-child { fill: #bec12b; }
+.dc-auth-brand i { width: 6px; height: 6px; border-radius: 50%; background: #cbce2f; margin-left: -3px; }
+.dc-auth-back { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #f4f5ef; color: #505921; }
+.dc-auth-form { display: flex; flex-direction: column; gap: 19px; width: 100%; max-width: 440px; margin: auto; padding: 35px 0; }
+.dc-auth-intro { margin-bottom: 7px; }
+.dc-auth-eyebrow { font-size: 11px; letter-spacing: .12em; color: #505921; margin: 0 0 15px; }
+.dc-auth-intro h1 { font-family: inherit; font-size: clamp(32px,3vw,42px); font-weight: 400; letter-spacing: -.055em; line-height: 1.1; margin: 0 0 13px; }
+.dc-auth-intro > p:last-child { color: #626653; font-size: 14px; line-height: 1.6; margin: 0; }
+.dc-auth-form label { color: #50553f; font-size: 12px; }
+.dc-auth-form input { width: 100%; min-height: 51px; border: 1px solid #dfe2d7; border-radius: 13px; background: #f8f9f5; color: #0e1205; padding: 12px 15px; font-family: inherit; font-size: 14px; box-shadow: none; }
+.dc-auth-form input::placeholder { color: #7a806a; }
+.dc-auth-form input:focus { outline: 2px solid #a3ab67; outline-offset: 2px; border-color: #505921; box-shadow: none; }
+.dc-auth-password { position: relative; }
+.dc-auth-password input { padding-right: 52px; }
+.dc-auth-password-toggle { position: absolute; right: 7px; bottom: 6px; display: grid; place-items: center; width: 39px; height: 39px; color: #626b49; border: 0; border-radius: 10px; background: transparent; cursor: pointer; }
+.dc-auth-help { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: -6px; font-size: 12px; line-height: 1.5; color: #646b53; }
+.dc-auth-link { color: #46531d; text-decoration: underline; text-underline-offset: 3px; }
+.dc-auth-link:hover { color: #0e1205; }
+.dc-auth-submit { display: inline-flex; justify-content: center; align-items: center; gap: 18px; width: 100%; min-height: 51px; padding: 13px 22px; border: 1px solid #0e1205; border-radius: 40px; background: #0e1205; color: white; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+.dc-auth-submit:hover { background: #303a17; }
+.dc-auth-submit:disabled { opacity: .6; cursor: wait; }
+.dc-auth-sso { width: 100%; min-height: 51px; padding: 13px 22px; border: 1px solid #cbd0ba; border-radius: 40px; background: #f8f9f5; color: #626653; font-family: inherit; font-size: 14px; font-weight: 500; cursor: not-allowed; }
+.dc-auth-sso-status { margin: -10px 0 0; color: #626653; font-size: 12px; text-align: center; }
+.dc-auth-divider { display: flex; align-items: center; gap: 14px; color: #626653; font-size: 11px; }
+.dc-auth-divider span { flex: 1; height: 1px; background: #dfe2d7; }
+.dc-auth-switch { text-align: center; margin: 2px 0 0; color: #626653; font-size: 13px; line-height: 1.6; }
+.dc-auth-switch a { color: #0e1205; font-weight: 500; }
+.dc-auth-password-hint { margin: -8px 0 0; font-size: 12px; color: #626653; }
+.dc-auth-error { color: #a52e20; background: #fcf0e9; border-radius: 10px; padding: 12px; font-size: 13px; line-height: 1.6; margin: 0; }
+.dc-auth-notice { color: #46531d; background: #f0f3e6; border-radius: 10px; padding: 12px; font-size: 13px; line-height: 1.6; margin: 0; }
+.dc-auth-install { border: 1px solid #cbd0ba; background: transparent; border-radius: 40px; min-height: 44px; padding: 10px 15px; color: #46531d; font-size: 13px; cursor: pointer; }
+.dc-auth-footnote { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; font-size: 11px; line-height: 1.6; color: #626653; }
+.dc-auth-footnote a { display: inline-flex; align-items: center; gap: 7px; color: #46531d; }
+.dc-auth-shell :is(a,button):focus-visible { outline: 2px solid #67752b; outline-offset: 4px; }
+
+@media(max-width:1000px) {
+  .dc-auth-layout { grid-template-columns: .9fr 1fr; }
+  .dc-auth-layout > main { padding: 26px; }
+}
+@media(max-width:760px) {
+  .dc-auth-layout { grid-template-columns: 1fr; }
+  .dc-auth-botanical { display: none; }
+  .dc-auth-layout > main { padding: 24px 20px 18px; }
+  .dc-auth-form { padding: 42px 0; }
+  .dc-auth-intro h1 { font-size: 36px; }
+}
+
+.dc-auth-shell { height: 100dvh; overflow-y: auto; }
+.dc-auth-botanical > img { object-position: 66% center; }
+.dc-auth-form label { display: block; margin-bottom: 6px; }
+.dc-auth-form input { display: block; height: 51px; }
+.dc-auth-demo { border: 1px solid #dfe2d7; border-radius: 13px; padding: 12px 15px; color: #626653; font-size: 12px; }
+.dc-auth-demo summary { cursor: pointer; }
+.dc-auth-demo button { display: block; width: 100%; text-align: left; padding: 10px 0; background: none; border: 0; border-top: 1px solid #dfe2d7; color: #46531d; font: inherit; cursor: pointer; }
+.dc-auth-demo summary + button { margin-top: 10px; }

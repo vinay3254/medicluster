@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Box, Typography, Button, CircularProgress } from '@mui/material';
-import { T, SANS, MONO, SERIF, btnSx, monoLabelSx } from '../theme/tokens';
+import './dispatch-auth.css';
 
 const DEMO_ACCOUNTS = [
   {
@@ -27,10 +26,11 @@ const DEMO_ACCOUNTS = [
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('Emergency@123');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [notice, setNotice] = useState(null);
 
   const { signInWithEmail } = useAuth();
   const navigate = useNavigate();
@@ -50,7 +50,6 @@ export default function LoginPage() {
 
     try {
       const res = await signInWithEmail(email.trim(), password);
-      console.log('[LoginPage] Sign in successful:', res);
 
       // Determine appropriate redirect destination
       if (email.includes('driver') || res.user?.user_metadata?.role === 'DRIVER') {
@@ -72,101 +71,53 @@ export default function LoginPage() {
     setErrorMsg(null);
   };
 
-  const fieldSx = {
-    height: 44, px: '12px', width: '100%', border: `1px solid ${T.bd2}`, borderRadius: '3px',
-    background: T.sf, color: T.tx, font: 'inherit', fontSize: 14, outline: 'none',
-    '&:focus': { borderColor: T.tx, boxShadow: `inset 0 0 0 0.5px ${T.tx}` },
-  };
-  const linkSx = { color: T.ac, textDecoration: 'underline', textUnderlineOffset: '2px', background: 'none', border: 0, p: 0, font: 'inherit', cursor: 'pointer', '&:hover': { color: T.tx } };
-
   return (
-    <Box sx={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, background: T.bg, color: T.tx, fontFamily: SANS }}>
-      {/* ── Brand panel ── */}
-      <Box component="aside" sx={{ display: { xs: 'none', lg: 'flex' }, flexDirection: 'column', justifyContent: 'space-between', p: '56px', background: T.tx, color: '#ecebe6' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <svg width="20" height="20" viewBox="0 0 18 18" aria-hidden="true">
-            <rect x="1" y="1" width="6" height="6" fill="#ecebe6" /><rect x="11" y="1" width="6" height="6" fill="#ecebe6" />
-            <rect x="1" y="11" width="6" height="6" fill="#ecebe6" /><rect x="11" y="11" width="6" height="6" fill="#e0703f" />
-          </svg>
-          <Typography sx={{ fontFamily: SERIF, fontSize: 24 }}>MediCluster</Typography>
-          <Typography sx={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.08em', color: '#8a8c8e', pl: '12px', borderLeft: '1px solid #45484d' }}>DISPATCH CENTER</Typography>
-        </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-          <Typography sx={{ fontFamily: SERIF, fontSize: 44, lineHeight: 1.15, letterSpacing: '-0.015em', maxWidth: 480 }}>
-            Every second counts. Every unit, in one view.
-          </Typography>
-          <Box sx={{ display: 'flex', gap: '2px', height: 14, maxWidth: 420 }} aria-hidden="true">
-            <Box sx={{ flex: 41, background: '#6fa585' }} /><Box sx={{ flex: 32, background: '#d5a640' }} />
-            <Box sx={{ flex: 20, background: '#e0703f' }} /><Box sx={{ flex: 7, minWidth: 20, background: '#d0433d' }} />
-          </Box>
-          <Typography sx={{ fontSize: 15, lineHeight: 1.55, color: '#b3b4b3', maxWidth: 420 }}>
-            Live incidents, unit positions, hospital capacity and radio comms — triaged and dispatched from a single screen.
-          </Typography>
-        </Box>
-        <Typography sx={{ fontFamily: MONO, fontSize: 11, color: '#8a8c8e' }}>Authorised personnel only · Activity is logged</Typography>
-      </Box>
-
-      {/* ── Sign-in form ── */}
-      <Box component="main" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', p: { xs: 3, sm: '56px' } }}>
-        <Box component="form" onSubmit={handleLogin} noValidate sx={{ width: '100%', maxWidth: 380, display: 'flex', flexDirection: 'column', gap: '22px' }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <Typography component="h1" sx={{ fontFamily: SERIF, fontSize: 32, letterSpacing: '-0.01em' }}>Sign in</Typography>
-            <Typography sx={{ fontSize: 14, color: T.tx2 }}>Use your dispatch centre account.</Typography>
-          </Box>
-
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <Typography component="label" htmlFor="email" sx={{ fontSize: 12, color: T.tx2 }}>Work email</Typography>
-            <Box component="input" id="email" type="email" autoComplete="email" value={email}
-              onChange={(e) => setEmail(e.target.value)} placeholder="operator@cad.emergency.in" sx={fieldSx} />
-          </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-              <Typography component="label" htmlFor="password" sx={{ fontSize: 12, color: T.tx2 }}>Password</Typography>
-              <Box component="button" type="button" onClick={() => setShowPassword((v) => !v)} sx={{ ...linkSx, fontSize: 12 }}
-                aria-pressed={showPassword}>{showPassword ? 'Hide' : 'Show'}</Box>
-            </Box>
-            <Box component="input" id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password"
-              value={password} onChange={(e) => setPassword(e.target.value)} sx={fieldSx} />
-          </Box>
-
-          {errorMsg && <Typography role="alert" sx={{ fontSize: 13, color: T.rT }}>{errorMsg}</Typography>}
-
-          <Button type="submit" disabled={isSubmitting} sx={{ ...btnSx(true), height: 44 }}>
-            {isSubmitting ? <CircularProgress size={18} sx={{ color: T.bg }} /> : 'Sign in'}
-          </Button>
-
-
-          {/* Demo roles (dev builds only) */}
-          {import.meta.env.DEV && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: '10px', pt: '6px' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px', ...monoLabelSx, fontSize: 11 }}>
-                <Box sx={{ flex: 1, height: '1px', background: T.bd }} />DEMO ROLES · DEV ONLY<Box sx={{ flex: 1, height: '1px', background: T.bd }} />
-              </Box>
-              <Box role="radiogroup" aria-label="Demo role" sx={{ borderTop: `1px solid ${T.tx}` }}>
-                {DEMO_ACCOUNTS.map((demo) => {
-                  const on = email === demo.email;
-                  return (
-                    <Box key={demo.email} component="button" type="button" role="radio" aria-checked={on} onClick={() => handleSelectDemo(demo)}
-                      sx={{
-                        width: '100%', display: 'grid', gridTemplateColumns: '14px minmax(0,1fr) auto', gap: '14px', alignItems: 'center',
-                        p: '12px 10px', border: 0, borderBottom: `1px solid ${T.bd}`, textAlign: 'left', font: 'inherit', cursor: 'pointer',
-                        background: on ? T.tx : 'transparent', color: on ? T.bg : T.tx,
-                        '&:hover': { background: on ? T.tx : T.sf2 },
-                      }}>
-                      <Box component="span" sx={{ width: 12, height: 12, borderRadius: '50%', border: on ? `4px solid ${T.bg}` : `1px solid ${T.bd2}` }} />
-                      <Box component="span" sx={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
-                        <Box component="span" sx={{ fontSize: 13.5, fontWeight: 500 }}>{demo.label}</Box>
-                        <Box component="span" sx={{ fontSize: 12, opacity: on ? 0.75 : 1, color: on ? T.bg : T.tx3 }}>{demo.desc}</Box>
-                      </Box>
-                      <Box component="span" sx={{ fontFamily: MONO, fontSize: 11, letterSpacing: '0.04em', opacity: 0.75 }}>{demo.role}</Box>
-                    </Box>
-                  );
-                })}
-              </Box>
-            </Box>
-          )}
-        </Box>
-      </Box>
-    </Box>
+    <div className="dc-auth-shell">
+      <div className="dc-auth-layout">
+        <aside className="dc-auth-botanical" aria-label="Sculpted copper and glass dispatch artwork">
+          <img src="/images/auth-ribbons.webp" alt="" fetchPriority="high" decoding="async" />
+          <span className="dc-auth-chip dc-auth-chip-one">Dispatch<i aria-hidden="true">+</i></span>
+          <span className="dc-auth-chip dc-auth-chip-two">Response<i aria-hidden="true">+</i></span>
+          <span className="dc-auth-chip dc-auth-chip-three"><i aria-hidden="true">+</i>Care</span>
+        </aside>
+        <main>
+          <div className="dc-auth-topline">
+            <a className="dc-auth-brand" href="#/login" aria-label="MediCluster Dispatch home">
+              <svg viewBox="0 0 18 18" aria-hidden="true"><rect x="1" y="1" width="6" height="6" fill="currentColor" /><rect x="11" y="1" width="6" height="6" fill="currentColor" /><rect x="1" y="11" width="6" height="6" fill="currentColor" /><rect x="11" y="11" width="6" height="6" /></svg>
+              <span>MediCluster</span><i aria-hidden="true" />
+            </a>
+            <a className="dc-auth-back" href="#/driver/login" aria-label="Open crew sign-in">↗</a>
+          </div>
+          <form onSubmit={handleLogin} className="dc-auth-form" noValidate>
+            <div className="dc-auth-intro">
+              <p className="dc-auth-eyebrow">YOUR DISPATCH WORKSPACE</p>
+              <h1>Welcome back</h1>
+              <p>Use your dispatch centre account.</p>
+            </div>
+            <button type="button" className="dc-auth-sso" disabled title="Single sign-on isn't configured for this deployment" aria-describedby="dispatch-sso-status">Continue with hospital SSO</button>
+            <p id="dispatch-sso-status" className="dc-auth-sso-status">Hospital SSO isn’t configured yet.</p>
+            <div className="dc-auth-divider"><span />OR<span /></div>
+            <div>
+              <label htmlFor="email">Work email</label>
+              <input id="email" type="email" autoComplete="email" placeholder="operator@hospital.com" value={email} onChange={e => setEmail(e.target.value)} required />
+            </div>
+            <div className="dc-auth-password">
+              <label htmlFor="password">Password</label>
+              <input id="password" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter your password" value={password} onChange={e => setPassword(e.target.value)} required />
+              <button className="dc-auth-password-toggle" type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword} onClick={() => setShowPassword(value => !value)}>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />{showPassword && <path d="m3 3 18 18" />}</svg>
+              </button>
+            </div>
+            <div className="dc-auth-help"><span>For authorised dispatch staff.</span><a className="dc-auth-link" href="#/login" onClick={e => { e.preventDefault(); setNotice('Ask your dispatch administrator to reset your password.'); }}>Forgot password?</a></div>
+            {errorMsg && <p role="alert" className="dc-auth-error">{errorMsg}</p>}
+            {notice && <p role="status" className="dc-auth-notice">{notice}</p>}
+            <button type="submit" disabled={isSubmitting} className="dc-auth-submit">{isSubmitting ? 'Signing in…' : 'Sign in'}<span aria-hidden="true">↗</span></button>
+            <p className="dc-auth-switch">New to MediCluster? <a href="#/login" className="dc-auth-link" onClick={e => { e.preventDefault(); setNotice('Contact your dispatch administrator to request an account for your centre.'); }}>Request access</a></p>
+            {import.meta.env.DEV && <details className="dc-auth-demo"><summary>Demo accounts · development only</summary>{DEMO_ACCOUNTS.map(demo => <button key={demo.email} type="button" onClick={() => handleSelectDemo(demo)}>{demo.label}</button>)}</details>}
+          </form>
+          <div className="dc-auth-footnote"><span>Every second connects us.</span><a href="#/driver/login">Crew sign-in<span aria-hidden="true">↗</span></a></div>
+        </main>
+      </div>
+    </div>
   );
 }

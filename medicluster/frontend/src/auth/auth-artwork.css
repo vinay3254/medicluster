@@ -1,25 +1,21 @@
 /* Clinician auth adapts the botanical Medi reference; landing and patient screens stay scoped. */
-.mc-auth-shell { display: grid; place-items: center; padding: 32px; min-height: 100dvh; background: #e9ebe3; color: #0e1205; font-family: 'Hanken Grotesk','IBM Plex Sans',Arial,sans-serif; }
-.mc-auth-layout { display: grid; grid-template-columns: 1.05fr 1fr; width: min(100%,1240px); min-height: 730px; padding: 12px; border-radius: 38px; background: #fff; box-shadow: 0 16px 50px #2630190a; }
-.mc-auth-botanical { position: relative; min-width: 0; min-height: 700px; border-radius: 28px; overflow: hidden; background: #e9ebe3; }
+.mc-auth-shell { display: grid; min-height: 100dvh; background: #fff; color: #0e1205; font-family: 'Hanken Grotesk','IBM Plex Sans',Arial,sans-serif; }
+.mc-auth-layout { display: grid; grid-template-columns: 1.05fr 1fr; width: 100%; min-height: 100dvh; background: #fff; }
+.mc-auth-botanical { position: relative; min-width: 0; min-height: 700px; overflow: hidden; background: #e9ebe3; }
 .mc-auth-botanical > img { display: block; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .mc-auth-chip { position: absolute; display: inline-flex; align-items: center; gap: 16px; border-radius: 40px; background: #fffffff2; padding: 5px 5px 5px 17px; font-size: 13px; color: #0e1205; box-shadow: 0 3px 15px #21300e08; }
 .mc-auth-chip i { display: grid; place-items: center; width: 28px; height: 28px; font-size: 23px; line-height: 1; border-radius: 50%; background: #d9d733; color: #3d4216; font-style: normal; }
 .mc-auth-chip-one { top: 9%; left: 8%; }
 .mc-auth-chip-two { top: 43%; left: 6%; }
 .mc-auth-chip-three { bottom: 29%; right: 6%; padding: 5px 17px 5px 5px; }
-.mc-auth-art-caption { position: absolute; bottom: 22px; left: 22px; right: 22px; padding: 21px 25px; background: #ffffffed; border-radius: 24px; }
-.mc-auth-art-caption > span { display: block; font-size: 11px; letter-spacing: .1em; color: #505921; margin-bottom: 10px; }
-.mc-auth-art-caption > p { font-size: 29px; line-height: 1.1; letter-spacing: -.045em; margin: 0; }
-.mc-auth-dot { color: #b6b91e; }
-.mc-auth-layout > main { display: flex; flex-direction: column; padding: 30px 44px 22px; min-width: 0; }
+.mc-auth-layout > main { display: flex; flex-direction: column; padding: 40px clamp(32px,4vw,80px) 28px; min-width: 0; }
 .mc-auth-topline { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
 .mc-auth-brand { display: inline-flex; align-items: center; gap: 9px; color: #0e1205; font-size: 22px; letter-spacing: -.055em; line-height: 1; }
 .mc-auth-brand svg { width: 21px; height: 21px; }
 .mc-auth-brand svg rect:last-child { fill: #bec12b; }
 .mc-auth-brand i { width: 6px; height: 6px; border-radius: 50%; background: #cbce2f; margin-left: -3px; }
 .mc-auth-back { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: #f4f5ef; color: #505921; }
-.mc-auth-form { display: flex; flex-direction: column; gap: 19px; width: 100%; max-width: 360px; margin: auto; padding: 35px 0; }
+.mc-auth-form { display: flex; flex-direction: column; gap: 19px; width: 100%; max-width: 440px; margin: auto; padding: 35px 0; }
 .mc-auth-intro { margin-bottom: 7px; }
 .mc-auth-eyebrow { font-size: 11px; letter-spacing: .12em; color: #505921; margin: 0 0 15px; }
 .mc-auth-intro h1 { font-family: inherit; font-size: clamp(32px,3vw,42px); font-weight: 400; letter-spacing: -.055em; line-height: 1.1; margin: 0 0 13px; }
@@ -37,6 +33,10 @@
 .mc-auth-submit { display: inline-flex; justify-content: center; align-items: center; gap: 18px; width: 100%; min-height: 51px; padding: 13px 22px; border: 1px solid #0e1205; border-radius: 40px; background: #0e1205; color: white; font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
 .mc-auth-submit:hover { background: #303a17; }
 .mc-auth-submit:disabled { opacity: .6; cursor: wait; }
+.mc-auth-sso { width: 100%; min-height: 51px; padding: 13px 22px; border: 1px solid #cbd0ba; border-radius: 40px; background: #f8f9f5; color: #626653; font-family: inherit; font-size: 14px; font-weight: 500; cursor: not-allowed; }
+.mc-auth-sso-status { margin: -10px 0 0; color: #626653; font-size: 12px; text-align: center; }
+.mc-auth-divider { display: flex; align-items: center; gap: 14px; color: #626653; font-size: 11px; }
+.mc-auth-divider span { flex: 1; height: 1px; background: #dfe2d7; }
 .mc-auth-switch { text-align: center; margin: 2px 0 0; color: #626653; font-size: 13px; line-height: 1.6; }
 .mc-auth-switch a { color: #0e1205; font-weight: 500; }
 .mc-auth-password-hint { margin: -8px 0 0; font-size: 12px; color: #626653; }
@@ -53,15 +53,11 @@
 .mc-patient-auth-shell .mc-patient-device { background: #fbfaf7f7; box-shadow: 0 30px 100px #0009; border-color: #c9d3bc; }
 .mc-patient-auth-shell .font-serif { font-family: inherit; }
 @media(max-width:1000px) {
-  .mc-auth-shell { padding: 22px; }
   .mc-auth-layout { grid-template-columns: .9fr 1fr; }
   .mc-auth-layout > main { padding: 26px; }
-  .mc-auth-art-caption { left: 15px; right: 15px; bottom: 15px; padding: 20px; }
-  .mc-auth-art-caption > p { font-size: 25px; }
 }
 @media(max-width:760px) {
-  .mc-auth-shell { padding: 18px; }
-  .mc-auth-layout { grid-template-columns: 1fr; min-height: 0; max-width: 480px; border-radius: 28px; padding: 9px; }
+  .mc-auth-layout { grid-template-columns: 1fr; }
   .mc-auth-botanical { display: none; }
   .mc-auth-layout > main { padding: 24px 20px 18px; }
   .mc-auth-form { padding: 42px 0; }

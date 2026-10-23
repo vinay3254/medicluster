@@ -73,16 +73,20 @@ export default function LoginPage() {
           <span className="mc-auth-chip mc-auth-chip-one">Insights<i aria-hidden="true">+</i></span>
           <span className="mc-auth-chip mc-auth-chip-two">Wellness<i aria-hidden="true">+</i></span>
           <span className="mc-auth-chip mc-auth-chip-three"><i aria-hidden="true">+</i>Care</span>
-          <div className="mc-auth-art-caption"><span>CONNECTED BY CARE</span><p>A clearer place<br />to care, together<span className="mc-auth-dot">.</span></p></div>
         </aside>
         <main>
           <div className="mc-auth-topline"><a className="mc-auth-brand" href="/download" aria-label="MediCluster home"><Logo /><span>MediCluster</span><i aria-hidden="true" /></a><a className="mc-auth-back" href="/download" aria-label="Back to MediCluster apps"><ArrowUpRight size={19} aria-hidden="true" /></a></div>
           <form onSubmit={submit} className="mc-auth-form" noValidate>
             <div className="mc-auth-intro">
               <p className="mc-auth-eyebrow">YOUR CLINICAL WORKSPACE</p>
-              <h1>{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
-              <p>{mode === "signin" ? "Sign in to continue to MediCluster." : "Get started with your hospital email."}</p>
+              <h1>{mode === "signin" ? "Welcome back" : "Request access"}</h1>
+              <p>{mode === "signin" ? "Use your hospital account." : "Use your approved hospital email to get started."}</p>
             </div>
+            {mode === "signin" && <>
+              <button type="button" className="mc-auth-sso" disabled title="Single sign-on isn't configured for this deployment" aria-describedby="hospital-sso-status">Continue with hospital SSO</button>
+              <p id="hospital-sso-status" className="mc-auth-sso-status">Hospital SSO isn’t configured yet.</p>
+              <div className="mc-auth-divider"><span />OR<span /></div>
+            </>}
             {mode === "request" && <Field id="name" label="Full name" placeholder="Your full name" autoComplete="name" value={form.name} onChange={set("name")} required />}
             <Field id="email" type="email" label="Work email" placeholder="you@hospital.com" autoComplete="email" value={form.email} onChange={set("email")} required />
             <div className="mc-auth-password">
@@ -93,7 +97,7 @@ export default function LoginPage() {
             {error && <p role="alert" className="mc-auth-error">{error}</p>}
             {notice && <p role="status" className="mc-auth-notice">{notice}</p>}
             <button type="submit" disabled={busy} className={primaryBtn}>{busy ? "Please wait…" : mode === "signin" ? "Sign in" : "Create account"}<ArrowUpRight size={18} aria-hidden="true" /></button>
-            <p className="mc-auth-switch">{mode === "signin" ? <>New to MediCluster? <a href="#" className={linkCls} onClick={switchMode("request")}>Create an account</a></> : <>Already have an account? <a href="#" className={linkCls} onClick={switchMode("signin")}>Sign in</a></>}</p>
+            <p className="mc-auth-switch">{mode === "signin" ? <>New to MediCluster? <a href="#" className={linkCls} onClick={switchMode("request")}>Request access</a></> : <>Already have an account? <a href="#" className={linkCls} onClick={switchMode("signin")}>Sign in</a></>}</p>
             {install && <button type="button" onClick={install} className="mc-auth-install">Install MediCluster app</button>}
           </form>
           <div className="mc-auth-footnote"><span>For every part of care.</span><a href="/download">Explore the apps<ArrowUpRight size={14} aria-hidden="true" /></a></div>
