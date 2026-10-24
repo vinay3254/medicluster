@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 120" fill="none">
+  <style>
+    .mc-block { fill: #15171A; }
+    .mc-text { fill: #15171A; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', 'Helvetica Neue', Arial, sans-serif; font-size: 62px; font-weight: 600; letter-spacing: -0.025em; }
+    @media (prefers-color-scheme: dark) {
+      .mc-block { fill: #F8FAFC; }
+      .mc-text { fill: #FFFFFF; }
+    }
+  </style>
+  <rect x="16" y="26" width="28" height="28" rx="3" class="mc-block"/>
+  <rect x="52" y="26" width="28" height="28" rx="3" class="mc-block"/>
+  <rect x="16" y="62" width="28" height="28" rx="3" class="mc-block"/>
+  <rect x="52" y="62" width="28" height="28" rx="3" fill="#E0703F"/>
+  <text x="100" y="78" class="mc-text">MediCluster</text>
+</svg>

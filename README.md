@@ -1,6 +1,10 @@
 <div align="center">
 
-<img src="docs/images/medicluster-brand.png" alt="MediCluster Logo" width="460" />
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/medicluster-logo-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="docs/images/medicluster-logo-light.png">
+  <img alt="MediCluster Logo" src="docs/images/medicluster-logo-light.png" width="340" />
+</picture>
 
 ### Next-Gen Unified Healthcare Platform & Emergency Dispatch Ecosystem
 
@@ -12,10 +16,7 @@
 [![Supabase](https://img.shields.io/badge/Supabase-Realtime-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![Android](https://img.shields.io/badge/Android-Native_APKs-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-
-<br/>
-
-<img src="docs/images/hero-landing.png" alt="MediCluster Hero" width="100%" />
+[![License: GPL v3](https://img.shields.io/badge/License-GNU_GPLv3-4B9CD3?style=for-the-badge&logo=gnu&logoColor=white)](LICENSE)
 
 </div>
 
@@ -24,12 +25,6 @@
 ## ⚡ Overview
 
 **MediCluster** bridges acute emergency dispatch and hospital clinical workflows into a single cohesive ecosystem. It unifies patient engagement, CAD ambulance routing, native mobile apps, and state-of-the-art diagnostic deep learning.
-
-<br/>
-
-<img src="docs/images/platform-overview.png" alt="MediCluster Platform Overview" width="100%" />
-
-<br/>
 
 ### 👥 Role-Driven Ecosystem
 
@@ -42,19 +37,31 @@
 
 ---
 
-## 🖥️ Workspaces
+## 🖥️ Platform Showcase
 
 <table width="100%">
   <tr>
     <td width="50%" align="center">
-      <h3>🩺 Clinical Workspace</h3>
-      <p><em>Hospital SSO, Patient EMR & Deep Learning Inference</em></p>
-      <img src="docs/images/clinical-workspace.png" alt="Clinical Workspace" width="100%" style="border-radius: 8px;"/>
+      <b>🌐 Role Gateway & Landing</b>
+      <br/><br/>
+      <img src="docs/images/hero-landing.png" alt="Platform Landing" width="100%" style="border-radius: 6px;"/>
     </td>
     <td width="50%" align="center">
-      <h3>🚨 Dispatch Workspace</h3>
-      <p><em>Emergency CAD Console, GPS Tracking & Fleet Logistics</em></p>
-      <img src="docs/images/dispatch-workspace.png" alt="Dispatch Workspace" width="100%" style="border-radius: 8px;"/>
+      <b>🩺 Clinical Workspace</b>
+      <br/><br/>
+      <img src="docs/images/clinical-workspace.png" alt="Clinical Workspace" width="100%" style="border-radius: 6px;"/>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <b>🚨 Dispatch Operations</b>
+      <br/><br/>
+      <img src="docs/images/dispatch-workspace.png" alt="Dispatch Operations" width="100%" style="border-radius: 6px;"/>
+    </td>
+    <td width="50%" align="center">
+      <b>📊 Clinician EMR Dashboard</b>
+      <br/><br/>
+      <img src="docs/images/clinician-dashboard.png" alt="Clinical EMR Dashboard" width="100%" style="border-radius: 6px;"/>
     </td>
   </tr>
 </table>
@@ -294,6 +301,12 @@ Set `BRAIN_MRI_URL=http://127.0.0.1:8001` in `medicluster/backend/.env`.
 | **ML Engine** | `medicluster/ml-engine` | Docker / Python | Gunicorn container exposing `:8080` |
 | **Dispatch CAD** | `ambulance-dispatch/frontend/dispatcher-dashboard` | Static / Web | `npm ci && npm run build` $\rightarrow$ publish `dist` |
 | **Dispatch API** | `ambulance-dispatch/backend/api` | Node Web Service | `npm ci && npm start` |
+
+---
+
+## 📄 License
+
+Distributed under the **GNU General Public License v3.0 (GPL-3.0)**. See [`LICENSE`](file:///home/vinay/medicluster/LICENSE) for complete terms and copyleft permissions.
 
 ---
 
