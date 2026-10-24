@@ -1,14 +1,13 @@
 import { useLocation } from "react-router-dom";
 import { NAV_ITEMS, isActive } from "../navigation";
 
-// Shared building blocks for the clinician screens: page frame, ruled sections,
-// tier/severity tags, segmented controls and key–value rows.
+// Shared cards, page headings, clinical tags and controls.
 
 export function PageHeader({ title, sub }) {
   const { pathname } = useLocation();
   const item = NAV_ITEMS.find((i) => i.to && isActive(i.to, pathname));
   return (
-    <header className="flex flex-col gap-2 max-w-[720px]">
+    <header className="mc-page-heading flex flex-col gap-2 max-w-[720px]">
       {item && (
         <span className="font-mono text-[11px] tracking-[0.08em] uppercase text-slate-500">{item.num} — {item.group}</span>
       )}
@@ -20,20 +19,20 @@ export function PageHeader({ title, sub }) {
 
 export function Page({ title, sub, actions, children, className = "" }) {
   return (
-    <div className={`px-4 min-[860px]:px-10 pt-5 min-[860px]:pt-9 pb-16 flex flex-col gap-8 min-w-0 ${className}`}>
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className={`mc-workspace-page px-4 min-[860px]:px-10 pt-5 min-[860px]:pt-9 pb-16 flex flex-col gap-8 min-w-0 ${className}`}>
+      <div className="mc-workspace-page-header flex flex-wrap items-end justify-between gap-4">
         <PageHeader title={title} sub={sub} />
         {actions && <div className="flex flex-wrap items-center gap-2.5">{actions}</div>}
       </div>
-      {children}
+      <div className="mc-workspace-page-content">{children}</div>
     </div>
   );
 }
 
 export function Section({ title, aside, children, className = "" }) {
   return (
-    <section className={`flex flex-col min-w-0 ${className}`}>
-      <div className="flex justify-between items-baseline gap-3 pb-2 border-b border-ink">
+    <section className={`mc-section-card flex flex-col min-w-0 ${className}`}>
+      <div className="mc-section-heading flex justify-between items-baseline gap-3">
         <h2 className="font-sans text-[13px] font-semibold tracking-normal">{title}</h2>
         {aside}
       </div>
@@ -65,7 +64,7 @@ export function Tag({ tone, children, className = "" }) {
 
 export function Segmented({ options, value, onChange, label, mono = false, fullWidth = false }) {
   return (
-    <div role="tablist" aria-label={label}
+    <div role="tablist" aria-label={label} data-card-control="segments"
       className={`flex border border-line-strong rounded-[3px] overflow-hidden ${fullWidth ? "w-full" : "w-fit"}`}>
       {options.map((o, i) => {
         const on = o.value === value;
@@ -85,7 +84,7 @@ export function Segmented({ options, value, onChange, label, mono = false, fullW
 // Underlined tab strip used above charts and tools.
 export function Tabs({ options, value, onChange, label }) {
   return (
-    <div role="tablist" aria-label={label} className="flex gap-5 border-b border-line overflow-x-auto">
+    <div role="tablist" aria-label={label} data-card-control="tabs" className="flex gap-5 border-b border-line overflow-x-auto">
       {options.map((o) => {
         const on = o.value === value;
         return (

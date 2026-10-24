@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 43 33% 98%;
-    --foreground: 216 11% 9%;
-    --card: 43 33% 98%;
-    --card-foreground: 216 11% 9%;
-    --popover: 43 33% 98%;
-    --popover-foreground: 216 11% 9%;
-    --primary: 216 11% 9%;
-    --primary-foreground: 43 33% 98%;
-    --secondary: 42 23% 94%;
-    --secondary-foreground: 216 11% 9%;
-    --muted: 42 23% 94%;
-    --muted-foreground: 223 3% 44%;
-    --accent: 223 70% 47%;
-    --accent-foreground: 43 33% 98%;
+    --background: 45 33.3% 97.6%;
+    --foreground: 152.7 19.3% 11.2%;
+    --card: 0 0% 100%;
+    --card-foreground: 152.7 19.3% 11.2%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 152.7 19.3% 11.2%;
+    --primary: 152.7 19.3% 11.2%;
+    --primary-foreground: 45 33.3% 97.6%;
+    --secondary: 88 27.3% 89.2%;
+    --secondary-foreground: 152.7 19.3% 11.2%;
+    --muted: 88 27.3% 89.2%;
+    --muted-foreground: 93.3 4.6% 38.6%;
+    --accent: 19.6 46.6% 46.3%;
+    --accent-foreground: 45 33.3% 97.6%;
     --destructive: 3 58% 48%;
-    --destructive-foreground: 43 33% 98%;
-    --border: 42 16% 84%;
-    --input: 42 16% 84%;
-    --ring: 223 70% 47%;
+    --destructive-foreground: 45 33.3% 97.6%;
+    --border: 76.4 12.9% 83.3%;
+    --input: 76.4 12.9% 83.3%;
+    --ring: 19.6 46.6% 46.3%;
     --radius: .375rem;
   }
 
@@ -35,26 +35,26 @@
   }
 
   body {
-    background-color: #f3f1ec;
-    color: #15171a;
-    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    background-color: #fbfaf7;
+    color: #17221d;
+    font-family: 'Hanken Grotesk', 'IBM Plex Sans', Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Display headings use the editorial serif at a single weight. */
+  /* Display headings match the website's clean sans typography. */
   h1, h2 {
-    font-family: 'Newsreader', Georgia, serif;
+    font-family: 'Hanken Grotesk', 'IBM Plex Sans', Arial, sans-serif;
     font-weight: 400 !important;
     letter-spacing: -0.01em;
   }
 
   a { color: inherit; }
-  :focus-visible { outline: 2px solid #2447c9; outline-offset: 2px; }
+  :focus-visible { outline: 2px solid #ad633f; outline-offset: 2px; }
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: #efece6; }
-  ::-webkit-scrollbar-thumb { background: #bcb6a9; border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: #6c6e73; }
+  ::-webkit-scrollbar-track { background: #eef1e8; }
+  ::-webkit-scrollbar-thumb { background: #bdc6b7; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #62675e; }
 }
 
 @layer components {
@@ -104,8 +104,8 @@
 /* ── Spinner ──────────────────────────────────────────────────────── */
 @keyframes spin { to { transform: rotate(360deg); } }
 .spinner {
-  border: 2px solid #dcd8cf;
-  border-top-color: #15171a;
+  border: 2px solid #d7dacf;
+  border-top-color: #17221d;
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
 }

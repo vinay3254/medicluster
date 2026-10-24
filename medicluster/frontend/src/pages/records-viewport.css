@@ -1,0 +1,56 @@
+.records-page .mc-workspace-page-content { min-height: 0; gap: 12px; }
+.records-page .record-layout { flex: 1; flex-shrink: 1; min-height: 0; display: grid; grid-template-columns: minmax(230px,.55fr) minmax(0,1fr); gap: 18px; }
+.record-card { flex: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 12px; border-radius: 24px; padding: 18px; background: #f4eee7; }
+.record-card h2 { font-size: 18px; font-weight: 600; margin: 0; }
+.record-card p { font-size: 14px; line-height: 1.6; margin: 0; overflow-wrap: anywhere; }
+.record-roster { background: #e4ebdc; }
+.record-roster h2 { display: flex; align-items: center; justify-content: space-between; }
+.record-roster h2 span { font-size: 12px; font-weight: 400; }
+.record-roster .input-field { width: 100%; min-width: 0; }
+.record-profile-pane,.record-profile,.report-preview { min-height: 0; min-width: 0; display: flex; flex: 1; flex-direction: column; gap: 12px; }
+.record-identity { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.record-identity h2 { font-size: 24px; line-height: 1.2; overflow-wrap: anywhere; }
+.record-identity > span { font-size: 12px; }
+.record-paged-list { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.record-rows { flex: 1; min-height: 0; }
+.record-row { min-height: 76px; display: flex; flex-direction: column; justify-content: center; border-bottom: 1px solid #d8dccf; font-size: 13px; }
+.record-row strong { font-weight: 500; }
+.record-row small { display: block; font-size: 11px; line-height: 1.6; color: #62675e; }
+.record-value { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.record-value > span:last-child { text-align: right; }
+.record-patient-pick { width: 100%; min-height: 60px; padding: 8px 10px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; }
+.record-patient-pick.is-selected { background: #17251d; color: #fbfaf7; }
+.record-patient-pick.is-selected small { color: #d6decc; }
+.record-card-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
+.record-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+.records-page .record-links :is(.btn-primary,.btn-secondary) { min-height: 36px; padding: 8px 14px; font-size: 12px; }
+.record-back { display: none; }
+.record-access form { display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 12px; }
+.record-access form label { grid-column: 1/-1; }
+.record-access form input { width: 100%; }
+.record-access form [role=alert] { grid-column: 1/-1; }
+.records-page .record-muted { color: #62675e; font-size: 12px; }
+.records-page .mc-screen-views { flex-shrink: 1; }
+.report-settings { max-width: 760px; width: 100%; }
+.report-settings > label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.report-settings select { min-height: 40px; padding: 8px 12px; border: 1px solid #d7dacf; border-radius: 12px; background: #fbfaf7; width: 100%; }
+.report-settings > div > p { font-size: 12px; margin-bottom: 6px; }
+.report-includes { max-width: 760px; width: 100%; background: #e4ebdc; }
+.report-includes > label { display: flex; align-items: center; gap: 12px; min-height: 38px; font-size: 14px; border-bottom: 1px solid #d2dcc7; }
+.report-includes input { width: 16px; height: 16px; accent-color: #17251d; }
+.record-print-template { display: none; }
+@media(max-width:859px) {
+  .records-page .record-layout { grid-template-columns: minmax(0,1fr); }
+  .record-layout .record-profile-pane { display: none; }
+  .record-layout.record-show-profile .record-roster { display: none; }
+  .record-layout.record-show-profile .record-profile-pane { display: flex; }
+  .record-back { display: inline-flex; flex-shrink: 0; align-self: flex-start; align-items: center; }
+  .record-card { padding: 14px; }
+  .record-identity h2 { font-size: 20px; }
+}
+@media print {
+  body.printing-report .records-page > .mc-workspace-page-header,
+  body.printing-report .reports-page .mc-workspace-page-content > .mc-screen-views { display: none !important; }
+  body.printing-report .record-print-template { display: block !important; position: static !important; height: auto !important; overflow: visible !important; }
+  body.printing-report #report { margin: 0 !important; box-shadow: none !important; }
+}

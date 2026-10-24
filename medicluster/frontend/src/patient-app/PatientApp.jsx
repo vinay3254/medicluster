@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom";
+import { House, MessageCircle, HeartPulse } from "lucide-react";
 import {
   listReminders, markDoseTaken, getPatientProfile, updatePatientProfile, listReadings,
   getPatientToken, setPatientToken,
@@ -181,12 +182,12 @@ function AppRoutes() {
 /** Full-screen on phones; a 390×844 device frame on larger screens. */
 function PhoneFrame({ children, signedIn }) {
   if (isPatientAndroid()) {
-    if (signedIn) return <div className="h-[100dvh] w-full bg-paper text-ink overflow-hidden flex flex-col">{children}</div>;
+    if (signedIn) return <div className="mc-patient-app h-[100dvh] w-full bg-paper text-ink overflow-hidden flex flex-col">{children}</div>;
     return <div className="mc-patient-auth-shell h-[100dvh] w-full flex items-center justify-center"><div className="mc-patient-device relative bg-paper text-ink overflow-hidden flex flex-col">{children}</div></div>;
   }
   return (
-    <div className={`${signedIn ? "" : "mc-patient-auth-shell"} min-h-[100dvh] bg-[#e4e1da] flex items-center justify-center sm:py-8`}>
-      <div className={`${signedIn ? "" : "mc-patient-device"} relative w-full h-[100dvh] sm:w-[390px] sm:h-[844px] sm:rounded-[44px] sm:border-[10px] sm:border-ink bg-paper text-ink overflow-hidden flex flex-col`}>
+    <div className={`${signedIn ? "" : "mc-patient-auth-shell"} min-h-[100dvh] bg-sunken flex items-center justify-center sm:py-8`}>
+      <div className={`${signedIn ? "mc-patient-app" : "mc-patient-device"} relative w-full h-[100dvh] sm:w-[390px] sm:h-[844px] sm:rounded-[44px] sm:border-[10px] sm:border-ink bg-paper text-ink overflow-hidden flex flex-col`}>
         <StatusBar />
         {children}
       </div>
@@ -206,33 +207,17 @@ function StatusBar() {
 }
 
 const TABS = [
-  { to: "/app", label: "Today", end: true },
-  { to: "/app/cliniq", label: "Ask CliniQ" },
-  { to: "/app/health", label: "My health" },
+  { to: "/app", label: "Today", end: true, icon: House },
+  { to: "/app/cliniq", label: "Ask CliniQ", icon: MessageCircle },
+  { to: "/app/health", label: "My health", icon: HeartPulse },
 ];
 
 export function TabBar() {
-  return (
-    <nav className="h-[84px] shrink-0 grid grid-cols-3 border-t border-line bg-surface pb-5">
-      {TABS.map(({ to, label, end }) => (
-        <NavLink
-          key={to}
-          to={to}
-          end={end}
-          className={({ isActive }) =>
-            `flex flex-col items-center justify-center gap-1 text-xs ${isActive ? "font-semibold text-ink" : "text-slate-500"}`
-          }
-        >
-          {({ isActive }) => (
-            <>
-              <span className={`w-[18px] h-[3px] ${isActive ? "bg-ink" : ""}`} />
-              {label}
-            </>
-          )}
-        </NavLink>
-      ))}
-    </nav>
-  );
+  return <nav className="mc-patient-tabs" aria-label="Patient navigation">
+    {TABS.map(({ to, label, end, icon: Icon }) => <NavLink key={to} to={to} end={end}>
+      <Icon size={20} strokeWidth={1.6} aria-hidden="true" />{label}
+    </NavLink>)}
+  </nav>;
 }
 
 /** Raises the reminder sheet (and a system notification when the tab is hidden) for due doses. */

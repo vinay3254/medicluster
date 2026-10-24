@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { ArrowUpRight, Bell, CalendarDays, HeartPulse, MessageCircle } from "lucide-react";
 import { usePatient, TabBar, slotKey } from "../PatientApp";
 import { Body, ListHeader, ErrorNote, initials } from "../ui";
 import { adherence, formatRelative, formatTime12, joinNames, nowMinutes, toMinutes } from "../../data/schedule";
@@ -47,35 +48,26 @@ export default function TodayScreen() {
   return (
     <>
       <Body className="px-[22px] pt-[18px] pb-6 flex flex-col gap-6">
-        <div className="flex justify-between items-center">
-          <span className="font-mono text-[11px] tracking-[0.08em] text-slate-500">
-            {now.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).replace(",", "").toUpperCase()}
-          </span>
-          <Link
-            to="/app/profile"
-            aria-label="Profile and settings"
-            className="w-[34px] h-[34px] rounded-full bg-sunken grid place-items-center text-xs font-semibold"
-          >
-            {initials(profile?.name)}
-          </Link>
-        </div>
-
+        <header className="mc-patient-greeting">
+          <div><p>{now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short" })}</p><h1>{greeting(now)}{firstName ? `, ${firstName}` : ""}<span className="text-blue-500">.</span></h1></div>
+          <Link to="/app/profile" aria-label="Profile and settings" className="mc-patient-avatar">{initials(profile?.name)}</Link>
+        </header>
         <ErrorNote>{error}</ErrorNote>
+        <section className="mc-patient-feature" aria-labelledby="patient-care-title">
+          <p className="mc-card-eyebrow">YOUR EVERYDAY CARE</p>
+          <h2 id="patient-care-title">{loading ? "Loading…" : headline}</h2>
+          <img src="/images/care-island.webp" alt="" width="1536" height="1024" decoding="async" />
+          {!loading && !todaySlots.length && <p>Your care team adds medicines to your plan in MediCluster.</p>}
+          {!loading && todaySlots.length > 0 && <p>A little care, one day at a time. Your next steps are right here.</p>}
+        </section>
 
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[15px] text-slate-600">
-            {greeting(now)}{firstName ? `, ${firstName}` : ""}
-          </span>
-          <h1 className="m-0 font-serif text-[34px] leading-[1.1] tracking-[-0.01em]">
-            {loading ? "Loading…" : headline}
-          </h1>
-          {!loading && !todaySlots.length && (
-            <span className="text-sm text-slate-500">Your care team adds medicines to your plan in MediCluster.</span>
-          )}
-        </div>
+        <nav className="mc-patient-actions" aria-label="Your care shortcuts">
+          <Link to="/app/health" className="mc-action-card" data-tone="forest"><span className="mc-card-icon"><HeartPulse size={20} strokeWidth={1.5} aria-hidden="true" /></span><ArrowUpRight className="mc-card-arrow" size={16} aria-hidden="true" /><h3>My health</h3><p>Readings &amp; trends</p></Link>
+          <Link to="/app/visits" className="mc-action-card" data-tone="peach"><span className="mc-card-icon"><CalendarDays size={20} strokeWidth={1.5} aria-hidden="true" /></span><ArrowUpRight className="mc-card-arrow" size={16} aria-hidden="true" /><h3>Visits &amp; medicines</h3><p>Your care, organised</p></Link>
+        </nav>
 
         {next && (
-          <div className="flex flex-col gap-2.5 p-4 bg-surface border border-line rounded">
+          <div className="mc-patient-card flex flex-col gap-2.5">
             <div className="flex justify-between gap-3 text-sm">
               <span className="font-medium">
                 {notes.length ? notes.join("; ") : next.reminders.map((r) => r.dosage).filter(Boolean).join(", ") || "Your scheduled dose"}
@@ -107,7 +99,7 @@ export default function TodayScreen() {
         )}
 
         {todaySlots.length > 0 && (
-          <div className="flex flex-col">
+          <div className="mc-patient-card flex flex-col">
             <ListHeader title="Today" meta={`${takenCount} of ${doses.length}`} />
             {todaySlots.map((slot) => {
               const isNext = slot === next;
@@ -115,11 +107,11 @@ export default function TodayScreen() {
               return (
                 <div
                   key={slot.time}
-                  className="grid grid-cols-[52px_14px_1fr_auto] gap-3 items-center min-h-[52px] py-2 border-b border-line text-sm"
+                  className="grid grid-cols-[44px_12px_minmax(0,1fr)_auto] gap-2 items-center min-h-[52px] py-2 border-b border-line text-sm"
                 >
                   <span className={`font-mono ${slot.taken ? "text-slate-500" : ""}`}>{slot.time}</span>
                   <span className={`w-2.5 h-2.5 ${slot.taken ? "bg-emerald-500" : "border-[1.5px] border-ink"}`} />
-                  <span className={isNext ? "font-medium" : ""}>
+                  <span className={`min-w-0 break-words ${isNext ? "font-medium" : ""}`}>
                     {slot.reminders.map((r) => r.medicationName).join(", ")}
                   </span>
                   <span className={`text-xs ${slot.taken ? "text-emerald-700" : overdue ? "text-orange-600" : "text-slate-500"}`}>
@@ -132,7 +124,7 @@ export default function TodayScreen() {
         )}
 
         {week.pct != null && (
-          <div className="flex justify-between items-center py-3.5 border-b border-line">
+          <div className="mc-patient-card flex justify-between items-center" data-tone="sage">
             <div className="flex flex-col gap-0.5">
               <span className="text-sm font-medium">This week</span>
               <span className="text-xs text-slate-500">
@@ -143,22 +135,10 @@ export default function TodayScreen() {
           </div>
         )}
 
-        <div className="flex flex-col border-t border-line">
-          {canNotify && (
-            <button
-              onClick={() => Notification.requestPermission().then(() => forceRender((n) => n + 1))}
-              className="flex justify-between items-center min-h-12 border-b border-line text-sm text-left"
-            >
-              <span>Turn on reminder alerts</span><span className="text-slate-500">›</span>
-            </button>
-          )}
-          <Link to="/app/visits" className="flex justify-between items-center min-h-12 border-b border-line text-sm">
-            <span>Visits &amp; medicines</span><span className="text-slate-500">›</span>
-          </Link>
-          <Link to="/app/emergency" className="flex justify-between items-center min-h-12 border-b border-line text-sm text-red-600 font-medium">
-            <span>Emergency help</span><span>›</span>
-          </Link>
-        </div>
+        <Link to="/app/cliniq" className="mc-patient-notify"><MessageCircle size={20} strokeWidth={1.5} aria-hidden="true" /><span><strong className="block font-medium">A question on your mind?</strong><span className="text-slate-500">Ask CliniQ about your everyday care.</span></span><ArrowUpRight size={17} aria-hidden="true" /></Link>
+        {canNotify && <button onClick={() => Notification.requestPermission().then(() => forceRender(n => n + 1))} className="mc-patient-notify"><Bell size={19} strokeWidth={1.5} aria-hidden="true" /><span>Turn on reminder alerts</span><ArrowUpRight size={16} aria-hidden="true" /></button>}
+        <Link to="/app/emergency" className="mc-patient-emergency"><span>Need urgent help?</span><span className="inline-flex items-center gap-2">Emergency help<ArrowUpRight size={16} aria-hidden="true" /></span></Link>
+
       </Body>
       <TabBar />
     </>

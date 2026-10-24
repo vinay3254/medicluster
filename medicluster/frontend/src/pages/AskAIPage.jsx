@@ -2,15 +2,16 @@ import { useCallback, useRef, useState, useEffect } from "react";
 import { aiChat } from "../api/apiClient";
 import { Page, linkCls } from "../components/ui";
 import { PromptInput } from "../components/ui/ai-chat-input";
+import { ArrowUpRight, Hand, ScanLine, Bandage, Eye, Sparkles } from "lucide-react";
 
 const ACCEPT = "image/jpeg,image/png,image/gif,image/webp";
 
 // Starter prompts shown before the first message.
 const CATEGORIES = [
-  { tag: "SKIN",  title: "Skin & rashes",  text: "I have an itchy red rash on my forearm" },
-  { tag: "X-RAY", title: "X-ray findings", text: "What does this X-ray finding mean?" },
-  { tag: "WOUND", title: "Wounds",         text: "My wound is swollen and warm — is it infected?" },
-  { tag: "EYE",   title: "Eyes",           text: "Red, watery eye for two days" },
+  { tag: "SKIN", icon: Hand, tone: "sage", title: "Skin & rashes",  text: "I have an itchy red rash on my forearm" },
+  { tag: "X-RAY", icon: ScanLine, tone: "peach", title: "X-ray findings", text: "What does this X-ray finding mean?" },
+  { tag: "WOUND", icon: Bandage, tone: "forest", title: "Wounds",         text: "My wound is swollen and warm — is it infected?" },
+  { tag: "EYE", icon: Eye, tone: "lavender", title: "Eyes",           text: "Red, watery eye for two days" },
 ];
 
 const LANGUAGES = [
@@ -249,11 +250,12 @@ export default function AskAIPage() {
   return (
     <Page
       title="CliniQ"
+      className="mc-cliniq-page"
       sub="Chat about symptoms or share a medical image — get condition, prevention, treatment & medications."
     >
-      <div className="max-w-[820px] w-full border-t border-ink">
-        <div className="flex justify-between items-center gap-3 py-2.5 border-b border-line text-xs text-slate-500">
-          <span className="font-mono tracking-[0.04em] uppercase">
+      <div className="mc-cliniq-shell">
+        <div className="mc-cliniq-toolbar">
+          <span className="mc-cliniq-status">
             {count ? `Conversation · ${count} message${count === 1 ? "" : "s"}` : "New conversation"}
           </span>
           <div className="flex gap-4 items-center">
@@ -267,29 +269,21 @@ export default function AskAIPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-7 py-7" role="log" aria-live="polite">
+        <div className="mc-cliniq-log" role="log" aria-live="polite">
           {count === 0 && (
-            <div className="flex flex-col gap-6 pt-4 pb-2">
-              <p className="font-serif text-[28px] leading-[1.25] tracking-[-0.01em] max-w-[600px]">
-                Describe a symptom or attach photos. CliniQ will suggest the likely condition, prevention, treatment and medications.
-              </p>
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(min(140px,100%),1fr))] gap-4">
-                {CATEGORIES.map((c) => (
-                  <button key={c.tag} type="button" onClick={() => handleChatSubmit(c.text, [])} disabled={loading}
-                    className="flex flex-col gap-2 text-left hover:opacity-80">
-                    <div className="w-full aspect-[4/3] rounded-sm flex items-end p-2 bg-[repeating-linear-gradient(135deg,#e9e6df_0_10px,#dcd8cf_10px_20px)]">
-                      <span className="font-mono text-[11px] tracking-[0.06em] text-slate-600">{c.tag}</span>
-                    </div>
-                    <span className="text-[13.5px] font-medium">{c.title}</span>
-                    <span className="text-[12.5px] text-slate-600 leading-snug">“{c.text}” →</span>
-                  </button>
-                ))}
+            <div className="mc-cliniq-welcome">
+              <div className="mc-cliniq-intro"><span className="mc-cliniq-badge"><Sparkles size={15} aria-hidden="true" /> A little clarity, a little care</span><h2>What’s on your mind?</h2><p>Describe a symptom, share a photo, or start with a question below.</p></div>
+              <div className="mc-cliniq-categories">
+                {CATEGORIES.map(({ icon: Icon, ...category }) => <button key={category.tag} type="button" onClick={() => handleChatSubmit(category.text, [])} disabled={loading} className="mc-cliniq-category" data-tone={category.tone}>
+                  <span className="mc-cliniq-category-top"><span className="mc-cliniq-category-icon"><Icon size={25} strokeWidth={1.4} aria-hidden="true" /></span><ArrowUpRight size={18} aria-hidden="true" /></span>
+                  <span className="mc-cliniq-category-title">{category.title}</span><span className="mc-cliniq-category-prompt">{category.text}</span>
+                </button>)}
               </div>
             </div>
           )}
 
           {messages.map((msg, i) => msg.role === "user" ? (
-            <div key={i} className="flex flex-col items-end gap-2 pl-[20%]">
+            <div key={i} className="mc-cliniq-user">
               {msg.images && msg.images.length > 0 && (
                 <div className={`grid gap-2 ${msg.images.length === 1 ? "grid-cols-1 max-w-[240px]" : "grid-cols-2 sm:grid-cols-3 max-w-[420px]"}`}>
                   {msg.images.map((img, idx) => (
@@ -303,15 +297,15 @@ export default function AskAIPage() {
                 </div>
               )}
               {msg.content && (
-                <div className="bg-ink text-paper px-3.5 py-2.5 text-[14px] leading-normal rounded-sm whitespace-pre-wrap">
+                <div className="mc-cliniq-user-bubble">
                   {msg.content}
                 </div>
               )}
             </div>
           ) : (
-            <div key={i} className="grid grid-cols-[28px_minmax(0,1fr)] gap-3.5 pr-[4%]">
-              <span className="w-7 h-7 grid place-items-center border border-ink font-mono text-[11px] rounded-sm bg-slate-50 text-slate-900 font-bold" aria-hidden="true">Q</span>
-              <div className="text-[14px] text-slate-700 leading-relaxed bg-white/70 p-3.5 rounded-sm border border-slate-200/60 shadow-xs">
+            <div key={i} className="mc-cliniq-assistant">
+              <span className="mc-cliniq-assistant-avatar" aria-hidden="true">Q</span>
+              <div className="mc-cliniq-assistant-bubble">
                 {renderMarkdown(msg.content)}
               </div>
             </div>
@@ -328,6 +322,7 @@ export default function AskAIPage() {
           <div ref={bottomRef} />
         </div>
 
+        <div className="mc-cliniq-composer">
         {error && <p role="alert" className="text-[13px] text-red-700 pb-3">{error}</p>}
 
         <div className="w-full flex justify-center pt-2">
@@ -341,7 +336,8 @@ export default function AskAIPage() {
             onSubmit={(text, meta) => handleChatSubmit(text, meta.attachments)}
           />
         </div>
-        <p className="pt-4 text-xs text-slate-500 text-center">AI guidance only. Not a diagnosis — consult a clinician before starting treatment.</p>
+        <p className="mc-cliniq-footnote">AI guidance only. Not a diagnosis — consult a clinician before starting treatment.</p>
+        </div>
       </div>
     </Page>
   );

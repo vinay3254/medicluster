@@ -9,10 +9,10 @@ async function open(page, path) {
 test('botanical clinician forms switch modes, preserve values and submit through existing auth', async ({ page }) => {
   await open(page, '/login');
   await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible();
-  await expect(page.locator('.mc-auth-shell')).toHaveCSS('background-color', 'rgb(233, 235, 227)');
+  await expect(page.locator('.mc-auth-shell')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
   await page.getByLabel('Work email', { exact: true }).fill('sample@example.com');
-  await page.getByRole('link', { name: 'Create an account', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible();
+  await page.getByRole('link', { name: 'Request access', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Request access' })).toBeVisible();
   await expect(page.getByLabel('Work email', { exact: true })).toHaveValue('sample@example.com');
   await page.getByLabel('Full name', { exact: true }).fill('Sample User');
   await page.getByLabel('Password', { exact: true }).fill('sample-password');

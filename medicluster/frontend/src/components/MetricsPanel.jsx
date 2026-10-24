@@ -15,7 +15,7 @@ const METRIC_CONFIG = {
       : v > 0.25 ? "Weak clustering"
       : "Overlapping clusters",
     color: (v) =>
-      v === null ? "#6c6e73"
+      v === null ? "#62675e"
       : v > 0.5  ? "#1d39a3"
       : v > 0.25 ? "#5f78d4"
       : "#a19c92",
@@ -34,7 +34,7 @@ const METRIC_CONFIG = {
       : v < 2.0  ? "Moderate overlap"
       : "Poor separation",
     color: (v) =>
-      v === null ? "#6c6e73"
+      v === null ? "#62675e"
       : v < 0.5  ? "#1d39a3"
       : v < 1.0  ? "#5f78d4"
       : "#a19c92",
@@ -53,7 +53,7 @@ const METRIC_CONFIG = {
       : v > 50    ? "Moderate structure"
       : "Diffuse clusters",
     color: (v) =>
-      v === null ? "#6c6e73"
+      v === null ? "#62675e"
       : v > 200   ? "#1d39a3"
       : v > 50    ? "#5f78d4"
       : "#a19c92",

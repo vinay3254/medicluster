@@ -111,7 +111,7 @@ export default function ComparisonPanel({ allResults }) {
               ) : (
                 <ResponsiveContainer width="100%" height={180}>
                   <ScatterChart margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
-                    <CartesianGrid stroke="#dcd8cf" strokeDasharray="2 2" />
+                    <CartesianGrid stroke="#d7dacf" strokeDasharray="2 2" />
                     <XAxis dataKey="x" type="number" tick={{ fontSize: 9, fill: "#45484d" }} />
                     <YAxis dataKey="y" type="number" tick={{ fontSize: 9, fill: "#45484d" }} />
                     <ZAxis range={[15, 15]} />

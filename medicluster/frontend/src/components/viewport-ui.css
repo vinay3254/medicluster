@@ -1,0 +1,23 @@
+.mc-screen-views { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 14px; }
+.mc-screen-view-tabs { display: flex; flex-shrink: 0; flex-wrap: wrap; align-items: center; gap: 5px; padding: 5px; border-radius: 18px; background: #eaf0e3; }
+.mc-screen-view-tabs button { min-height: 34px; padding: 7px 14px; border: 0; border-radius: 99px; background: transparent; color: #62675e; font: inherit; font-size: 12px; cursor: pointer; }
+.mc-screen-view-tabs button[aria-selected="true"] { background: #fff; color: #17221d; box-shadow: 0 2px 7px #17221d07; }
+.mc-screen-view-select { display: none; }
+.mc-view-panel { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; gap: 14px; }
+.mc-view-panel[hidden] { display: none !important; }
+.mc-pagination { display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; gap: 12px; margin-top: auto; padding-top: 12px; font-size: 11px; color: #62675e; }
+.mc-pagination button { min-height: 34px; padding: 7px 14px; border: 1px solid #d7dacf; border-radius: 99px; background: #fff; color: #17221d; font: inherit; cursor: pointer; }
+.mc-pagination button:disabled { opacity: .4; cursor: default; }
+.mc-fit-card { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 20px; border: 1px solid #e4e8dc; border-radius: 24px; background: #fff; gap: 12px; }
+.mc-fit-card > h2 { margin: 0; font-size: 18px; }
+.mc-fit-card form { min-height: 0; }
+.mc-fit-field-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.mc-fit-field-grid label { display: flex; flex-direction: column; gap: 5px; min-width: 0; font-size: 11px; color: #62675e; }
+.mc-fit-field-grid :is(input,select,textarea) { min-height: 36px; width: 100%; min-width: 0; border: 1px solid #d7dacf; border-radius: 11px; background: #fbfaf7; padding: 7px 10px; color: #17221d; }
+@media(max-width:600px) {
+  .mc-screen-view-tabs { display: none; }
+  .mc-screen-view-select { display: block; flex-shrink: 0; }
+  .mc-screen-view-select select { width: 100%; min-height: 40px; padding: 9px 14px; border: 1px solid #d7dacf; border-radius: 14px; background: #eaf0e3; color: #17221d; font: inherit; font-size: 13px; }
+  .mc-fit-card { padding: 16px; }
+  .mc-fit-field-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+}

@@ -1,15 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 import animate from "tailwindcss-animate";
 
-// MediCluster design system: warm paper neutrals, ink primary, muted semantic colours.
+// MediCluster website palette: ivory, sage, forest ink and copper accents.
 // Default Tailwind families are remapped so every page picks up the palette.
 const neutral = {
-  50: "#f7f5f0", 100: "#efece6", 200: "#dcd8cf", 300: "#bcb6a9", 400: "#8f8b84",
-  500: "#6c6e73", 600: "#45484d", 700: "#33353a", 800: "#222428", 900: "#15171a", 950: "#0d0e10",
+  50: "#f6f7f1", 100: "#eef1e8", 200: "#d7dacf", 300: "#bdc6b7", 400: "#8c9787",
+  500: "#62675e", 600: "#4b574c", 700: "#35483a", 800: "#23392b", 900: "#17221d", 950: "#0d1711",
 };
 const accent = {
-  50: "#eef1fb", 100: "#dfe5f7", 200: "#c3cdef", 300: "#97a8e2", 400: "#6680d6",
-  500: "#3d5dcf", 600: "#2447c9", 700: "#1d39a3", 800: "#182f84", 900: "#142767", 950: "#0e1b48",
+  50: "#fcf5ef", 100: "#f7e6d9", 200: "#efd0b9", 300: "#e0ad8c", 400: "#d3906d",
+  500: "#c87350", 600: "#ad633f", 700: "#8f5033", 800: "#73412d", 900: "#5e3628", 950: "#321b13",
 };
 const good = {
   50: "#eef4f0", 100: "#dfe9e2", 200: "#c2d7c9", 300: "#9bbfa8", 400: "#74a389",
@@ -55,16 +55,16 @@ export default {
         red: danger, rose: danger, pink: danger,
         violet: plum, purple: plum, fuchsia: plum,
         ink: neutral[900],
-        paper: "#f3f1ec",
-        surface: "#fbfaf7",
-        sunken: "#e9e6df",
-        line: { DEFAULT: "#dcd8cf", strong: "#bcb6a9" },
+        paper: "#fbfaf7",
+        surface: "#ffffff",
+        sunken: "#e4ebdc",
+        line: { DEFAULT: "#d7dacf", strong: "#bdc6b7" },
         navy: {
-          950: "#e9e6df",
-          900: "#f3f1ec",
+          950: "#e4ebdc",
+          900: "#fbfaf7",
           800: "#fbfaf7",
-          700: "#e9e6df",
-          600: "#dcd8cf",
+          700: "#e4ebdc",
+          600: "#d7dacf",
         },
         risk: {
           low: "#5b8f72",
@@ -86,9 +86,10 @@ export default {
         "2xl": "0 20px 48px rgba(21,23,26,0.14)",
       },
       fontFamily: {
-        sans: ["IBM Plex Sans", "system-ui", "sans-serif"],
+        sans: ["Hanken Grotesk", "IBM Plex Sans", "Arial", "sans-serif"],
         mono: ["IBM Plex Mono", "monospace"],
-        serif: ["Newsreader", "Georgia", "serif"],
+        // Legacy display classes use the website sans family, too.
+        serif: ["Hanken Grotesk", "IBM Plex Sans", "Arial", "sans-serif"],
       },
     },
   },

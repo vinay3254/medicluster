@@ -1,20 +1,23 @@
-import { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { getMlHealth } from "../api/apiClient";
 import { NAV_GROUPS, NAV_ITEMS, isActive } from "../navigation";
 import Logo from "./Logo";
-import { useInstallPrompt } from "../installPrompt";
+import { House, Bell, ChartNoAxesCombined, ScanLine, Brain, Activity, FlaskConical, Users, CalendarClock, FileText, MessageCircle, Sparkles, Hospital, Radio, Menu as MenuIcon } from "lucide-react";
+
+const NAV_ICONS = { Home: House, Alerts: Bell, Dashboard: ChartNoAxesCombined, Imaging: ScanLine, "3D Tumor Explorer": Brain, "Deterioration Radar": Activity, Predict: Activity, "ML Tools": FlaskConical, Patients: Users, Reminders: CalendarClock, Reports: FileText, CliniQ: MessageCircle, "Clinical AI": Sparkles, Hospitals: Hospital, Dispatch: Radio };
 
 const ML_POLL_MS = 30_000;
 
 function NavItem({ item, active }) {
-  const cls = `flex items-center gap-2 w-full h-[30px] px-2 rounded-sm text-[13.5px] text-left ${
+  const Icon = NAV_ICONS[item.label] || Activity;
+  const cls = `mc-nav-link flex items-center gap-2 w-full h-[30px] px-2 rounded-sm text-[13.5px] text-left ${
     active ? "bg-ink text-paper font-medium" : "text-ink hover:bg-sunken"
   }`;
   const body = (
     <>
-      <span className={`w-[18px] font-mono text-[11px] ${active ? "text-paper/70" : "text-slate-500"}`}>{item.num}</span>
+      <Icon size={17} strokeWidth={1.6} aria-hidden="true" />
       {item.label}
     </>
   );
@@ -45,52 +48,10 @@ function MlStatus() {
   );
 }
 
-// Enter on a page name opens that page; anything else is treated as a patient ID.
-function Search() {
-  const navigate = useNavigate();
-  const ref = useRef();
-  const [q, setQ] = useState("");
-
-  useEffect(() => {
-    const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        ref.current?.focus();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  const submit = (e) => {
-    e.preventDefault();
-    const term = q.trim();
-    if (!term) return;
-    const page = NAV_ITEMS.find((i) => i.label.toLowerCase().startsWith(term.toLowerCase()));
-    if (page?.href) window.location.href = page.href;
-    else navigate(page ? page.to : `/patient/${encodeURIComponent(term)}`);
-    setQ("");
-    ref.current?.blur();
-  };
-
-  return (
-    <form role="search" onSubmit={submit}
-      className="flex items-center gap-2 flex-[0_1_260px] min-w-0 h-[30px] px-2.5 border border-line rounded-[3px] bg-surface text-slate-500 text-[13px] focus-within:border-ink">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-        <circle cx="7" cy="7" r="5" /><path d="M11 11l3.5 3.5" />
-      </svg>
-      <input ref={ref} value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search patient ID or page"
-        placeholder="Patient ID or page" className="flex-1 min-w-0 bg-transparent outline-none text-ink placeholder:text-slate-500" />
-      <kbd className="hidden sm:inline font-mono text-[11px]">⌘K</kbd>
-    </form>
-  );
-}
-
 export default function AppShell({ children }) {
   const { pathname } = useLocation();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-  const install = useInstallPrompt();
 
   useEffect(() => setMenuOpen(false), [pathname]);
   useEffect(() => {
@@ -101,7 +62,7 @@ export default function AppShell({ children }) {
   }, [menuOpen]);
 
   return (
-    <div className="min-h-screen grid min-[860px]:grid-cols-[216px_minmax(0,1fr)] bg-paper text-ink">
+    <div className="mc-workspace min-h-screen grid min-[860px]:grid-cols-[216px_minmax(0,1fr)] bg-paper text-ink">
       {menuOpen && (
         <div className="fixed inset-0 z-30 bg-black/35 min-[860px]:hidden" onClick={() => setMenuOpen(false)} aria-hidden="true" />
       )}
@@ -120,7 +81,7 @@ export default function AppShell({ children }) {
         <nav className="flex flex-col gap-5" aria-label="Main">
           {NAV_GROUPS.map((g) => (
             <div key={g.label} className="flex flex-col gap-px">
-              <div className="px-2 pb-1.5 font-mono text-[10.5px] tracking-[0.08em] uppercase text-slate-500">{g.label}</div>
+              <div className="mc-nav-group-label px-2 pb-1.5 font-mono text-[10.5px] tracking-[0.08em] uppercase text-slate-500">{g.label}</div>
               {NAV_ITEMS.filter((i) => i.group === g.label).map((item) => (
                 <NavItem key={item.label} item={item} active={!!item.to && isActive(item.to, pathname)} />
               ))}
@@ -140,27 +101,9 @@ export default function AppShell({ children }) {
         </div>
       </aside>
 
-      <div className="min-w-0 flex flex-col">
-        <div className="sticky top-0 z-20 h-14 flex items-center gap-2.5 px-4 min-[860px]:px-10 border-b border-line bg-paper">
-          <button type="button" onClick={() => setMenuOpen((o) => !o)} aria-expanded={menuOpen} aria-controls="app-sidebar"
-            className="min-[860px]:hidden h-10 min-w-11 px-2.5 border border-line-strong rounded-[3px] text-[13px]">
-            {menuOpen ? "Close" : "Menu"}
-          </button>
-          <div className="flex-1 flex justify-end items-center gap-2.5 min-w-0">
-            <Search />
-            {install && (
-              <button type="button" onClick={install}
-                className="h-[30px] px-2.5 flex items-center bg-ink text-paper rounded-[3px] font-mono text-[11px] tracking-[0.04em] uppercase whitespace-nowrap hover:bg-slate-700">
-                Install app
-              </button>
-            )}
-            <Link to="/app"
-              className="h-[30px] px-2.5 flex items-center border border-line-strong rounded-[3px] font-mono text-[11px] tracking-[0.04em] uppercase whitespace-nowrap hover:bg-sunken">
-              Patient app
-            </Link>
-          </div>
-        </div>
-        <main className="flex-1 min-w-0">{children}</main>
+      <div className="mc-workspace-body min-w-0 flex flex-col">
+        <button type="button" className="mc-mobile-menu" onClick={() => setMenuOpen(o => !o)} aria-label={menuOpen ? "Close" : "Menu"} aria-expanded={menuOpen} aria-controls="app-sidebar"><MenuIcon size={20} aria-hidden="true" /></button>
+        <main className="mc-workspace-main flex-1 min-w-0">{children}</main>
       </div>
     </div>
   );

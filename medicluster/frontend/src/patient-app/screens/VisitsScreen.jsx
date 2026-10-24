@@ -67,7 +67,7 @@ export default function VisitsScreen() {
         <ErrorNote>{error}</ErrorNote>
 
         {visitAt ? (
-          <div className="flex flex-col gap-3 p-4 bg-ink text-paper rounded">
+          <div className="mc-patient-card flex flex-col gap-3" data-tone="forest">
             <span className="font-mono text-[10px] tracking-[0.08em] opacity-70">NEXT VISIT · {visitCountdown(visitAt, now)}</span>
             <span className="font-serif text-[26px] leading-[1.1]">
               {visitAt.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }).replace(",", "")},{" "}
@@ -94,7 +94,7 @@ export default function VisitsScreen() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-3 p-4 bg-surface border border-line rounded">
+          <div className="mc-patient-card flex flex-col gap-3">
             <span className="text-sm text-slate-600">No visit booked.</span>
             <Link to="/app/profile" className="h-11 grid place-items-center border border-ink rounded text-sm font-medium">
               Add your next visit
@@ -103,7 +103,7 @@ export default function VisitsScreen() {
         )}
 
         {visit?.checklist?.length > 0 && (
-          <div className="flex flex-col">
+          <div className="mc-patient-card flex flex-col">
             <ListHeader title="Bring to your visit" />
             {visit.checklist.map((item, i) => (
               <label key={i} className="flex gap-3 items-center min-h-12 border-b border-line text-sm cursor-pointer">
@@ -120,7 +120,7 @@ export default function VisitsScreen() {
           </div>
         )}
 
-        <div className="flex flex-col">
+        <div className="mc-patient-card flex flex-col">
           <ListHeader title="Refills" meta="PILLS LEFT" />
           {tracked.length === 0 && (
             <span className="py-3 text-sm text-slate-500">Pill counts appear here once your care team tracks them.</span>

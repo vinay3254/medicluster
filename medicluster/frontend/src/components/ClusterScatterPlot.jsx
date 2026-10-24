@@ -74,22 +74,22 @@ export default function ClusterScatterPlot({ patients = [], featureNames = [], o
       ) : (
         <ResponsiveContainer width="100%" height="100%" minHeight={380}>
           <ScatterChart margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-            <CartesianGrid stroke="#dcd8cf" strokeDasharray="3 3" />
+            <CartesianGrid stroke="#d7dacf" strokeDasharray="3 3" />
             <XAxis
               dataKey="x"
               type="number"
               name={xAxis}
-              tick={{ fill: "#6c6e73", fontSize: 11, fontFamily: "IBM Plex Mono" }}
-              label={{ value: xAxis, fill: "#6c6e73", fontSize: 10, position: "insideBottom", offset: -2 }}
+              tick={{ fill: "#62675e", fontSize: 11, fontFamily: "IBM Plex Mono" }}
+              label={{ value: xAxis, fill: "#62675e", fontSize: 10, position: "insideBottom", offset: -2 }}
             />
             <YAxis
               dataKey="y"
               type="number"
               name={yAxis}
-              tick={{ fill: "#6c6e73", fontSize: 11, fontFamily: "IBM Plex Mono" }}
+              tick={{ fill: "#62675e", fontSize: 11, fontFamily: "IBM Plex Mono" }}
             />
             <ZAxis range={[30, 30]} />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#2447c922" }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: "#ad633f22" }} />
             <Legend
               wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
               formatter={(val) => <span style={{ color: RISK_COLORS[val] }}>{val}</span>}

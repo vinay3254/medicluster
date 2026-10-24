@@ -9,6 +9,7 @@ import { BRAIN_CLASSES, BRAIN_MRI_MODEL_ID, CHEST_DETECTOR_MODEL_ID, acceptsImag
 
 import ImagingDetectionOverlay from "../components/ImagingDetectionOverlay";
 import { createAnalysisCoordinator } from "../utils/imagingAnalysis";
+import "./imaging-page.css";
 
 const ACCEPT = "image/jpeg,image/png,image/gif,image/webp,image/bmp,image/tiff,.dcm,.dicom";
 const BRAIN_ACCEPT = "image/jpeg,image/png,image/webp,image/bmp,image/tiff,.dcm,.dicom";
@@ -29,14 +30,19 @@ function PathologyRows({ findings, isBrain, isDetector, threshold = THRESHOLD, h
   const rows = findings
     ? [...findings].sort((a, b) => b.confidence - a.confidence)
     : (isDetector ? [] : isBrain ? BRAIN_CLASSES : PATHOLOGIES).map((label) => ({ label, confidence: null }));
+  const [page, setPage] = useState(0);
+  const pages = Math.max(1, Math.ceil(rows.length / 5));
+  const activePage = Math.min(page, pages - 1);
+  useEffect(() => setPage(0), [findings, isBrain, isDetector]);
   return (
-    <div className="flex flex-col">
+    <div className="imaging-pathologies flex flex-col">
       <div className="flex justify-between gap-3 pb-2 border-b border-ink eyebrow">
         <span>{isBrain ? "MRI class" : "Pathology"}</span>
         <span>{isBrain ? "Model score" : `Model score · threshold ${threshold.toFixed(2)}`}</span>
       </div>
       {!findings && isDetector && <p className="py-3 text-xs text-slate-500">Detected regions appear here after analysis.</p>}
-      {rows.map((f, i) => {
+      {rows.slice(activePage * 5, activePage * 5 + 5).map((f, index) => {
+        const i = activePage * 5 + index;
         const on = f.confidence != null && (isBrain ? i === 0 : f.confidence >= threshold);
         return (
           <button type="button" disabled={!isDetector || f.confidence == null} onClick={() => onHighlight(f.label)} aria-pressed={isDetector ? highlight === f.label : undefined} key={f.label} className={`text-left grid grid-cols-[120px_minmax(0,1fr)_40px] gap-3 items-center py-1.5 border-b border-line text-[13px] ${
@@ -50,11 +56,24 @@ function PathologyRows({ findings, isBrain, isDetector, threshold = THRESHOLD, h
           </button>
         );
       })}
+      {pages > 1 && <div className="imaging-pagination"><button type="button" disabled={activePage === 0} onClick={() => setPage(activePage - 1)}>Previous findings</button><span>{activePage + 1} / {pages} · {rows.length} findings</span><button type="button" disabled={activePage === pages - 1} onClick={() => setPage(activePage + 1)}>Next findings</button></div>}
     </div>
   );
 }
 
+function PagedText({ text }) {
+  const [page, setPage] = useState(0);
+  const chunks = text.match(/[\s\S]{1,320}(?:\s|$)|[\s\S]{1,320}/g) || [text];
+  const active = Math.min(page, chunks.length - 1);
+  useEffect(() => setPage(0), [text]);
+  return <div className="imaging-explanation"><p>{chunks[active]}</p>{chunks.length > 1 && <div className="imaging-pagination"><button disabled={!active} onClick={() => setPage(active - 1)}>Previous text</button><span>{active + 1} / {chunks.length}</span><button disabled={active === chunks.length - 1} onClick={() => setPage(active + 1)}>Next text</button></div>}</div>;
+}
+
 export default function ImagingPage() {
+  const [resultTab, setResultTab] = useState("summary");
+  const [mobileView, setMobileView] = useState("image");
+  const [imagePage, setImagePage] = useState(0);
+  const [toolbarTab, setToolbarTab] = useState("study");
   const [patientId, setPatientId]   = useState("");
   const [images, setImages]         = useState([]);
   const [models, setModels]         = useState([]);
@@ -126,6 +145,7 @@ export default function ImagingPage() {
       if(!results.length)return;
       setImages((prev) => [...results, ...prev]);
       setSelectedId(results[0]?.gridfs_id ?? null);
+      setImagePage(0);
       setHighlight(null);
       for (const image of results) coordinator.current.request(image.gridfs_id, selectedModel);
     } catch (e) {
@@ -168,6 +188,7 @@ export default function ImagingPage() {
       setAnalysisStates(prev => Object.fromEntries(Object.entries(prev).filter(([,state]) => state.status === 'pending')));
       setHighlight(null);
       setSelectedId(imgs[0]?.gridfs_id ?? null);
+      setImagePage(0);
       if (imgs[0]?.analysis?.model) {
         const selection = imagingSummary(imgs[0].analysis);
         explicitSelection.current = true;
@@ -263,29 +284,51 @@ export default function ImagingPage() {
     } catch(failure) {setRecordActions(prev=>({...prev,[id]:{error:failure?.response?.data?.error || 'Could not save the record decision. Please retry.'}}));}
   };
 
+  const exportReport = async () => {
+    // Assemble the complete report independently of screen pagination and mobile tabs.
+    const report = document.createElement("div");
+    report.id = "imaging-complete-report";
+    Object.assign(report.style, { position: "absolute", left: "-10000px", top: "0", width: "800px", padding: "24px", background: "white", color: "#17251d", fontFamily: "sans-serif" });
+    const addText = (tag, text) => { const node = document.createElement(tag); node.textContent = text; report.append(node); };
+    addText("h2", `${current.original_name} · ${summary.label}`);
+    addText("p", `Model: ${visibleAnalysis.model} · Patient: ${patientId.trim() || current.patient_id || "Unassigned"}`);
+    const canvas = document.querySelector(".imaging-canvas")?.cloneNode(true);
+    if (canvas) { Object.assign(canvas.style, { display: "flex", height: "450px", width: "752px", flex: "none" }); report.append(canvas); }
+    addText("p", isDetector ? "Boxes mark model candidates; an empty result does not establish a normal scan." : "Grad-CAM shows model attention, not disease boundaries.");
+    addText("h3", "All model findings");
+    for (const finding of [...findings].sort((a, b) => b.confidence - a.confidence)) addText("p", `${finding.label}: ${finding.confidence.toFixed(2)}`);
+    if (exp?.text) { addText("h3", "Explanation"); addText("p", exp.text); }
+    addText("p", "Model output supports clinician review; it is not a diagnosis. Verify findings before clinical decisions.");
+    document.body.append(report);
+    try { await exportToPdf(report.id, "Imaging Analysis Report", "medicluster-imaging"); }
+    finally { report.remove(); }
+  };
+
   const fieldCls = "h-8 bg-transparent border-b border-line-strong text-ink focus:outline-none focus:border-ink";
 
   return (
     <Page
+      className="imaging-page"
       title="Imaging"
       sub="Upload chest X-rays for automatic finding detection, or select a classifier for chest images and brain MRI slices."
       actions={findings && (
         <button type="button" className="btn-secondary h-9 text-sm"
-          onClick={() => exportToPdf("imaging-results", "Imaging Analysis Report", "medicluster-imaging")}>
+          onClick={exportReport}>
           Export PDF
         </button>
       )}
     >
       <input ref={inputRef} type="file" accept={scanType === "brain-mri" ? BRAIN_ACCEPT : ACCEPT} multiple className="hidden" onChange={(e) => handleFiles(e.target.files)} />
 
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 pb-4 border-b border-line text-[13px]">
-        <form className="flex items-center gap-2 text-slate-600" onSubmit={(e) => { e.preventDefault(); handleLoad(); }}>
+      <div className="imaging-toolbar">
+        <div className="imaging-toolbar-switch" role="tablist" aria-label="Imaging controls">{["study", "model"].map(tab => <button type="button" role="tab" aria-selected={toolbarTab === tab} key={tab} onClick={() => setToolbarTab(tab)}>{tab === "study" ? "Patient & files" : "Scan & model"}</button>)}</div>
+        <form data-toolbar="study" data-active={toolbarTab === "study"} className="flex items-center gap-2 text-slate-600" onSubmit={(e) => { e.preventDefault(); handleLoad(); }}>
           Patient
           <input value={patientId} onChange={(e) => setPatientId(e.target.value)} placeholder="Patient ID"
             aria-label="Patient ID" className={`${fieldCls} w-32 font-mono`} />
           <button type="submit" disabled={loadingList} className={linkCls}>{loadingList ? "Loading…" : "Load"}</button>
         </form>
-        <label className="flex items-center gap-2 text-slate-600">
+        <label data-toolbar="model" data-active={toolbarTab === "model"} className="flex items-center gap-2 text-slate-600">
           Scan type
           <select aria-label="Scan type" value={scanType} onChange={(event) => changeScanType(event.target.value)}
             disabled={uploading || analyzingIds.size > 0} className={fieldCls}>
@@ -293,7 +336,7 @@ export default function ImagingPage() {
             <option value="brain-mri" disabled={!models.some(model => model.id === BRAIN_MRI_MODEL_ID)}>Brain MRI</option>
           </select>
         </label>
-        <label className="flex items-center gap-2 text-slate-600">
+        <label data-toolbar="model" data-active={toolbarTab === "model"} className="flex items-center gap-2 text-slate-600">
           Model
           <select aria-label="Imaging model" value={selectedModel} onChange={(e) => {explicitSelection.current=true;setSelectedModel(e.target.value);if(current)handleAnalyze(current,e.target.value);}} className={`${fieldCls} max-w-[260px]`}>
             {visibleModels.length === 0 && <option value={selectedModel}>{selectedModel}</option>}
@@ -303,25 +346,26 @@ export default function ImagingPage() {
             })}
           </select>
         </label>
-        <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} className={`ml-auto ${linkCls}`}>
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} data-toolbar="study" data-active={toolbarTab === "study"} className={`imaging-upload ${linkCls}`}>
           {uploading ? "Uploading…" : "Upload images"}
         </button>
       </div>
 
-      {error && <div role="alert" className="text-[13px] text-red-700">
+      {error && <div role="alert" className="imaging-error text-[13px] text-red-700">
         <p>{error}</p>
         {scanType === "chest-xray" && error.includes("Chest X-ray analysis is unavailable") && models.some(model => model.id === BRAIN_MRI_MODEL_ID) &&
           <button type="button" onClick={() => changeScanType("brain-mri")} className={`mt-2 ${linkCls}`}>Switch to Brain MRI</button>}
       </div>}
-      {scanType === "brain-mri" && <p className="text-[13px] text-slate-600">
+      {scanType === "brain-mri" && <p className="imaging-mri-note text-[13px] text-slate-600">
         Use a single brain MRI slice or single-frame MR DICOM. Model classifies glioma, meningioma, pituitary tumor or no tumor.
       </p>}
 
-      <div id="imaging-results" className="flex flex-wrap gap-10 items-start">
+      <div className="imaging-mobile-switch" role="tablist" aria-label="Imaging view">{["image", "results"].map(view => <button type="button" role="tab" aria-selected={mobileView === view} onClick={() => setMobileView(view)} key={view}>{view === "image" ? "Image viewer" : "Analysis & record"}</button>)}</div>
+      <div id="imaging-results" className="imaging-workspace" data-mobile-view={mobileView}>
         {/* ── Viewer ── */}
-        <div className="flex-[3_1_440px] min-w-0 flex flex-col gap-3"
+        <div className="imaging-viewer"
           onDragOver={(e) => { e.preventDefault(); setDragOver(true); }} onDragLeave={() => setDragOver(false)} onDrop={handleDrop}>
-          <div className="relative aspect-[4/3] bg-[#0e0f11] rounded-sm overflow-hidden flex flex-col items-center justify-center gap-3.5 p-8 text-center">
+          <div className="imaging-canvas relative bg-[#0e0f11] flex flex-col items-center justify-center gap-3.5 text-center">
             {!current ? (
               <>
                 <div className={`absolute inset-4 border border-dashed rounded-sm pointer-events-none ${dragOver ? "border-[#e9e6df]" : "border-[#3a3d42]"}`} />
@@ -357,8 +401,8 @@ export default function ImagingPage() {
             )}
           </div>
 
-          <div className="flex gap-2 flex-wrap">
-            {images.map((img) => {
+          <div className="imaging-filmstrip">
+            {images.slice(Math.min(imagePage, Math.max(0, Math.ceil(images.length / 3) - 1)) * 3, Math.min(imagePage, Math.max(0, Math.ceil(images.length / 3) - 1)) * 3 + 3).map((img) => {
               const on = img.gridfs_id === current?.gridfs_id;
               return (
                 <button key={img.gridfs_id} type="button" onClick={() => selectImage(img)} aria-pressed={on}
@@ -368,12 +412,10 @@ export default function ImagingPage() {
                 </button>
               );
             })}
-            {Array.from({ length: Math.max(0, 4 - images.length - 1) }, (_, i) => (
-              <div key={`slot-${i}`} className="w-24 h-[72px] border border-dashed border-line-strong rounded-sm" aria-hidden="true" />
-            ))}
             <button type="button" onClick={() => inputRef.current?.click()}
               className="w-24 h-[72px] border border-dashed border-line-strong rounded-sm text-xs text-slate-500 hover:bg-sunken">+ Add</button>
           </div>
+          {images.length > 3 && <div className="imaging-pagination"><button disabled={imagePage === 0} onClick={() => setImagePage(page => page - 1)}>Previous images</button><span>{Math.min(imagePage + 1, Math.ceil(images.length / 3))} / {Math.ceil(images.length / 3)}</span><button disabled={(imagePage + 1) * 3 >= images.length} onClick={() => setImagePage(page => page + 1)}>Next images</button></div>}
           {current && (
             <button type="button" onClick={() => handleDelete(current)} className="self-start text-xs text-red-700 underline underline-offset-2">
               Remove this image
@@ -382,7 +424,9 @@ export default function ImagingPage() {
         </div>
 
         {/* ── Findings ── */}
-        <section className="flex-[2_1_300px] min-w-0 flex flex-col gap-[22px]" aria-live="polite">
+        <section className="imaging-results-panel" aria-live="polite">
+          <div className="imaging-result-tabs" role="tablist" aria-label="Analysis details">{["summary", "findings", "explanation", "record"].map(tab => <button type="button" role="tab" aria-selected={resultTab === tab} onClick={() => setResultTab(tab)} key={tab}>{tab[0].toUpperCase() + tab.slice(1)}</button>)}</div>
+          {resultTab === "summary" && <div className="imaging-result-body">
           <div className="flex flex-col gap-2 pt-4 border-t border-ink">
             {!current ? (
               <>
@@ -411,20 +455,23 @@ export default function ImagingPage() {
                 {summary.isBrain && <p className="text-[13px] text-slate-600 leading-normal">
                   Research model output; clinician review required. Grad-CAM shows model attention, not tumor boundaries.
                 </p>}
-                {exp?.text && <p className="text-[13px] text-slate-600 leading-normal whitespace-pre-line">{exp.text}</p>}
+
                 {exp?.error && <p className="text-[13px] text-red-700">{exp.error}</p>}
                 {heat?.error && <p className="text-[13px] text-red-700">{heat.error}</p>}
               </>
             )}
           </div>
 
-          <PathologyRows findings={findings} isBrain={isBrain} isDetector={isDetector} threshold={isDetector ? visibleAnalysis?.localization?.threshold ?? .25 : THRESHOLD} highlight={highlightedLabel} onHighlight={setHighlight} />
+          </div>}
+          {resultTab === "findings" && <div className="imaging-result-body"><PathologyRows findings={findings} isBrain={isBrain} isDetector={isDetector} threshold={isDetector ? visibleAnalysis?.localization?.threshold ?? .25 : THRESHOLD} highlight={highlightedLabel} onHighlight={setHighlight} />
           {findings && isDetector && <label className="flex gap-2 items-center text-xs"><input type="checkbox" checked={showRegions} onChange={event=>setShowRegions(event.target.checked)}/> Show finding regions · {visibleAnalysis.localization?.boxes?.length ?? 0} boxes</label>}
 
-          {findings && (
-            <div className="flex gap-2.5 flex-wrap">
+          </div>}
+          {resultTab === "explanation" && <div className="imaging-result-body">{exp?.text ? <PagedText text={exp.text}/> : <p className="text-sm text-slate-600">{exp?.loading ? "Explaining…" : "Request an explanation from the Summary tab after analysis."}</p>}{exp?.error && <p role="alert">{exp.error}</p>}</div>}
+          {resultTab === "summary" && findings && (
+            <div className="imaging-analysis-actions flex gap-2.5 flex-wrap">
               {findings.length > 0 && !exp?.text && (
-                <button type="button" onClick={runExplain} disabled={exp?.loading} className="btn-primary h-10">
+                <button type="button" onClick={() => {setResultTab("explanation");runExplain();}} disabled={exp?.loading} className="btn-primary h-10">
                   {exp?.loading ? "Explaining…" : "Explain findings"}
                 </button>
               )}
@@ -439,7 +486,7 @@ export default function ImagingPage() {
               </button>
             </div>
           )}
-          {findings && <div className="flex flex-col gap-3 pt-4 border-t border-line">
+          {resultTab === "record" && (findings ? <div className="imaging-result-body flex flex-col gap-3 pt-4">
             <div className="flex gap-2.5 flex-wrap">
               <button type="button" className="btn-primary h-10" disabled={recordAction?.pending || !(patientId.trim() || current.patient_id && current.patient_id !== 'imaging-session')} onClick={()=>saveRecordDecision(false)}>Add to patient record</button>
               <button type="button" className="btn-secondary h-10" disabled={recordAction?.pending || !current.recordedAt} onClick={()=>saveRecordDecision(true)}>{current.reviewRequestedAt?'Review requested':'Flag for review'}</button>
@@ -447,7 +494,8 @@ export default function ImagingPage() {
             {!patientId.trim() && (!current.patient_id || current.patient_id === 'imaging-session') && <p className="text-xs text-slate-500">Enter a Patient ID to add this result to a record.</p>}
             {recordAction?.text && <p role="status" className="text-xs text-green-700">{recordAction.text}</p>}
             {recordAction?.error && <p role="alert" className="text-xs text-red-700">{recordAction.error}</p>}
-          </div>}
+          </div> : <p className="imaging-result-body text-sm">Analyze an image to save a result or request clinician review.</p>)}
+          <p className="imaging-disclaimer">Model output supports clinician review; it is not a diagnosis. Verify findings before clinical decisions.</p>
         </section>
       </div>
     </Page>

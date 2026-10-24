@@ -49,7 +49,7 @@ export default function HealthScreen() {
         <h1 className="m-0 font-serif text-[30px] tracking-[-0.01em]">My health</h1>
         <ErrorNote>{error}</ErrorNote>
 
-        <div className="flex flex-col gap-2.5 p-4 bg-surface border border-line rounded">
+        <div className="mc-patient-card flex flex-col gap-2.5" data-tone="sage">
           <div className="flex justify-between items-center">
             <Eyebrow>YOUR RISK LEVEL</Eyebrow>
             {risk && (
@@ -60,7 +60,7 @@ export default function HealthScreen() {
           </div>
           <div className="flex gap-0.5 h-2" role="img" aria-label={risk ? `Risk level ${risk.tier} of 4` : "No risk level yet"}>
             {TIERS.map((t, i) => (
-              <div key={t} className="flex-1" style={{ background: risk?.index === i ? RISK_COLORS[t] : "#dcd8cf" }} />
+              <div key={t} className="flex-1" style={{ background: risk?.index === i ? RISK_COLORS[t] : "#d7dacf" }} />
             ))}
           </div>
           <span className="text-sm leading-normal text-slate-600">
@@ -74,7 +74,7 @@ export default function HealthScreen() {
             meta={latestAt && new Date(latestAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
           />
           {rows.map(({ type, meta, latest, status, series }) => (
-            <div key={type} className="grid grid-cols-[1fr_auto_64px] gap-3 items-center min-h-14 py-2 border-b border-line">
+            <div key={type} className="mc-reading-card grid grid-cols-[1fr_auto_50px] gap-3 items-center min-h-14">
               <div className="flex flex-col gap-0.5">
                 <span className="text-sm">{meta.label}</span>
                 <span className={`text-xs ${latest ? LEVEL_TEXT[status.level] : "text-slate-500"}`}>
@@ -92,7 +92,7 @@ export default function HealthScreen() {
 
         <Link
           to="/app/health/log"
-          className="h-12 grid place-items-center border border-ink rounded text-[15px] font-medium"
+          className="mc-card-cta h-12 text-[15px] font-medium"
         >
           + Log a reading
         </Link>

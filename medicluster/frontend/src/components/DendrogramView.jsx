@@ -103,7 +103,7 @@ function drawDendrogram(svgEl, linkageMatrix, patients, cutPct) {
   svg.append("line")
     .attr("x1", 0).attr("x2", innerW)
     .attr("y1", cutY).attr("y2", cutY)
-    .attr("stroke", "#2447c9")
+    .attr("stroke", "#ad633f")
     .attr("stroke-width", 1.5)
     .attr("stroke-dasharray", "4,3")
     .attr("opacity", 0.7);
@@ -132,7 +132,7 @@ function drawDendrogram(svgEl, linkageMatrix, patients, cutPct) {
   // Y-axis
   svg.append("g")
     .call(d3.axisLeft(yScale).ticks(5).tickFormat(d3.format(".2f")))
-    .selectAll("text").style("fill", "#6c6e73").style("font-size", "10px");
+    .selectAll("text").style("fill", "#62675e").style("font-size", "10px");
 
   svg.select(".domain").attr("stroke", "#bcb6a9");
   svg.selectAll(".tick line").attr("stroke", "#bcb6a9");

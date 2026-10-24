@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { getPatientClusterHistory, listPatientMedia, listReminders } from "../api/apiClient";
 import { useAuth } from "../auth/AuthContext";
-import { Page, Section, Segmented, Tag } from "../components/ui";
+import { Page, Segmented, Tag } from "../components/ui";
 import { TIER_RANK, VITALS, adherence7d, fmtVital, loadLatestRuns, shortDate, vitalStatus } from "../data/clinical";
+
+import { Pager, ScreenViews, usePageCapacity } from "../components/viewport-ui";
+import "./records-viewport.css";
 
 const SECTIONS = [
   { key: "summary",     label: "Summary" },
@@ -56,7 +59,7 @@ export default function ReportsPage() {
   const findings = useMemo(() => [
     ...history.map((h) => ({ at: h.createdAt, text: `Assigned ${h.risk_tier} tier, cluster C${h.cluster_id}` })),
     ...media.map((m) => ({ at: m.uploadedAt, text: `Uploaded ${m.filename}` })),
-  ].filter((e) => new Date(e.at) >= since).sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 6), [history, media, since]);
+  ].filter((e) => new Date(e.at) >= since).sort((a, b) => new Date(b.at) - new Date(a.at)), [history, media, since]);
 
   const abnormal = patient ? VITALS.filter((v) => vitalStatus(v, patient[v.key]) && vitalStatus(v, patient[v.key]) !== "Normal") : [];
   const tiers = history.filter((h) => new Date(h.createdAt) >= since).map((h) => h.risk_tier);
@@ -75,46 +78,21 @@ export default function ReportsPage() {
   };
   const generated = new Date().toLocaleString([], { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
-  return (
-    <Page title="Reports" sub="Build a patient risk report to share, print or send to another system.">
-      <div className="grid gap-10 items-start lg:grid-cols-[330px_minmax(0,1fr)]">
-        <div className="flex flex-col gap-6 print:hidden">
-          <label className="flex flex-col gap-1.5 text-xs text-slate-600">
-            Patient
-            <select value={pid} onChange={(e) => setPid(e.target.value)} disabled={!patients.length}
-              className="h-10 px-3 border border-line-strong rounded-[3px] bg-surface text-[13.5px] text-ink focus:outline-none focus:border-ink">
-              {!patients.length && <option>Run clustering to list patients</option>}
-              {patients.map((p) => <option key={p.patient_id} value={p.patient_id}>{p.patient_id} · {p.risk_tier}</option>)}
-            </select>
-          </label>
-
-          <Section title="Include">
-            {SECTIONS.map((s) => (
-              <label key={s.key} className="flex items-center gap-3 py-2.5 border-b border-line text-[13.5px] cursor-pointer">
-                <input type="checkbox" checked={include[s.key]} onChange={(e) => setInclude((i) => ({ ...i, [s.key]: e.target.checked }))}
-                  className="w-4 h-4 accent-ink" />
-                {s.label}
-              </label>
-            ))}
-          </Section>
-
-          <div className="flex flex-col gap-2 text-xs text-slate-600">Period
-            <Segmented fullWidth mono label="Period" options={PERIODS} value={period} onChange={setPeriod} />
-          </div>
-          <div className="flex flex-col gap-2 text-xs text-slate-600">Format
-            <Segmented fullWidth mono label="Format" value={format} onChange={setFormat}
-              options={[{ value: "pdf", label: "PDF" }, { value: "csv", label: "CSV" }]} />
-          </div>
-          <button type="button" onClick={exportReport} disabled={!patient} className="btn-primary h-11">
-            Export {format.toUpperCase()}
-          </button>
-        </div>
-
-        <div className="bg-sunken p-4 sm:p-6 print:p-0 print:bg-transparent">
-          {!patient ? (
-            <p className="text-[13px] text-slate-500 p-6">Pick a patient to preview their report.</p>
-          ) : (
-            <article id="report" className="bg-surface max-w-[680px] mx-auto p-8 sm:p-12 flex flex-col gap-7 shadow-sm print:shadow-none">
+  const previewViews = [
+    include.summary && { id: "summary", label: "Summary", content: <section className="record-card record-summary"><h2>Patient risk report</h2><p>{summary}</p><p className="record-muted">Generated {generated}<br />{user?.name}{user?.department && ` · ${user.department}`}</p></section> },
+    include.vitals && { id: "vitals", label: "Vitals", content: <section className="record-card"><h2>Vitals & reference ranges</h2><ReportRows label="Report vital pages" items={VITALS} render={v => <div className="record-value"><span><strong>{v.label}</strong><small>Reference {v.ref[0]}–{v.ref[1]} {v.unit}</small></span><span>{fmtVital(v, patient?.[v.key])} {v.unit}<small>{vitalStatus(v, patient?.[v.key]) || "Not recorded"}</small></span></div>} /></section> },
+    include.tier && { id: "tier", label: "Risk", content: <section className="record-card record-summary"><h2>Risk tier & cluster</h2><p><Tag tone={patient?.risk_tier} /></p><p>Cluster C{patient?.cluster_id}</p><p>{[patient?.age != null && `${Math.round(patient.age)} years`, patient?.gender].filter(Boolean).join(" · ")}</p></section> },
+    include.medications && { id: "medications", label: "Medicines", content: <section className="record-card"><h2>Medications</h2><ReportRows label="Report medicine pages" items={reminders} render={r => <div><strong>{r.medicationName} {r.dosage}</strong><small>{r.frequency}{!r.active && " · paused"}{adherence7d(r) != null && ` · ${Math.round(adherence7d(r) * 100)}% taken (7 d)`}</small></div>} /></section> },
+    include.findings && { id: "findings", label: "Findings", content: <section className="record-card"><h2>Recent findings</h2><ReportRows label="Report finding pages" items={findings} render={f => <div><strong>{f.text}</strong><small>{shortDate(f.at)}</small></div>} /></section> },
+    { id: "notes", label: "Notes", content: <section className="record-card record-summary"><h2>Clinical notes</h2><p>Risk tiers are derived from unsupervised clustering and are decision support, not a diagnosis.</p><p>Signature ____________________</p><p className="record-muted">Export includes every selected section and all its records.</p></section> },
+  ];
+  return <Page className="records-page reports-page" title="Reports" sub="Build a patient risk report to share, print or send to another system." actions={<button type="button" onClick={exportReport} disabled={!patient} className="btn-primary">Export {format.toUpperCase()}</button>}>
+    <ScreenViews label="Report workspace views" views={[
+      { id: "settings", label: "Patient & format", content: <section className="record-card report-settings"><h2>Report settings</h2><label>Patient<select aria-label="Report patient" value={pid} onChange={e => setPid(e.target.value)} disabled={!patients.length}>{!patients.length && <option>Run clustering to list patients</option>}{patients.map(p => <option key={p.patient_id} value={p.patient_id}>{p.patient_id} · {p.risk_tier}</option>)}</select></label><div><p>Period</p><Segmented label="Period" options={PERIODS} value={period} onChange={setPeriod} /></div><div><p>Format</p><Segmented label="Format" value={format} onChange={setFormat} options={[{ value: "pdf", label: "PDF" }, { value: "csv", label: "CSV" }]} /></div><p className="record-muted">Select the sections to include, then review the preview before exporting.</p></section> },
+      { id: "sections", label: "Included sections", content: <section className="record-card report-includes"><h2>Include in report</h2>{SECTIONS.map(section => <label key={section.key}><input type="checkbox" checked={include[section.key]} onChange={e => setInclude(old => ({ ...old, [section.key]: e.target.checked }))} />{section.label}</label>)}</section> },
+      { id: "preview", label: "Preview", content: patient ? <div className="report-preview"><header className="record-identity"><h2>{patient.patient_id}</h2><span>Report preview</span></header><ScreenViews label="Report preview sections" views={previewViews} /></div> : <section className="record-card"><h2>Report preview</h2><p>Run clustering and select a patient to preview their report.</p></section> },
+    ]} />
+    {patient && <div className="record-print-template"><article id="report" className="bg-surface max-w-[680px] mx-auto p-8 sm:p-12 flex flex-col gap-7 shadow-sm print:shadow-none">
               <header className="flex justify-between gap-4 pb-4 border-b-2 border-ink">
                 <div>
                   <p className="font-serif text-xl">MediCluster</p>
@@ -194,10 +172,15 @@ export default function ReportsPage() {
                 <p className="max-w-[300px]">Risk tiers are derived from unsupervised clustering and are decision support, not a diagnosis.</p>
                 <p className="w-40 pt-1 border-t border-ink text-right">Signature</p>
               </footer>
-            </article>
-          )}
-        </div>
-      </div>
-    </Page>
-  );
+            </article></div>}
+  </Page>;
+}
+
+function ReportRows({ items, render, label }) {
+  const [ref, size] = usePageCapacity({ rowHeight: 76, reserved: 0, max: 100 });
+  const [page, setPage] = useState(0);
+  const pages = Math.max(1, Math.ceil(items.length / size));
+  const active = Math.min(page, pages - 1);
+  useEffect(() => setPage(0), [items]);
+  return <div className="record-paged-list"><div className="record-rows" ref={ref}>{items.length ? items.slice(active * size, (active + 1) * size).map((item, i) => <div className="record-row" key={item._id || item.key || i}>{render(item)}</div>) : <p>None recorded in this period.</p>}</div><Pager page={active} pages={pages} onChange={setPage} label={label} /></div>;
 }

@@ -15,11 +15,26 @@ export async function exportToPdf(elementId, title, filename) {
   }
 
   try {
+    const width = Math.max(element.clientWidth, element.scrollWidth);
+    const height = Math.max(element.clientHeight, element.scrollHeight);
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
       logging: false,
       backgroundColor: "#ffffff",
+      width,
+      height,
+      onclone: (_document, captured) => {
+        // Expand only the export clone; the on-screen workspace stays fitted.
+        captured.style.setProperty("height", `${height}px`, "important");
+        captured.style.setProperty("max-height", "none", "important");
+        captured.style.setProperty("flex", "none", "important");
+        captured.scrollTop = 0;
+        captured.scrollLeft = 0;
+        for (let node = captured; node; node = node.parentElement) {
+          node.style.setProperty("overflow", "visible", "important");
+        }
+      },
     });
 
     const imgData = canvas.toDataURL("image/png");
@@ -81,6 +96,6 @@ export async function exportToPdf(elementId, title, filename) {
     pdf.save(`${filename}-${now.toISOString().slice(0, 10)}.pdf`);
   } catch (err) {
     console.error("PDF export failed:", err);
-    alert("Export failed — try scrolling to top first and retrying.");
+    alert("Export failed — please try again.");
   }
 }

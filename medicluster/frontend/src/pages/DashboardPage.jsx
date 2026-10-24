@@ -12,6 +12,7 @@ import DendrogramView     from "../components/DendrogramView";
 import ChartErrorBoundary from "../components/ChartErrorBoundary";
 import AIClusterInsights  from "../components/AIClusterInsights";
 import { runClustering, detectAnomalies, explainClusters } from "../api/apiClient";
+import { ScreenViews, Pager, usePageCapacity } from "../components/viewport-ui";
 import { exportToPdf }    from "../utils/exportPdf";
 
 const TABS = ["Scatter", "Comparison", "Dendrogram", "Anomalies"].map((label, i) => ({ value: i, label }));
@@ -80,6 +81,8 @@ function PatientDetailModal({ patient, clusterProfiles, featureNames, onClose })
 }
 
 function AnomalyWatchlist({ patients, anomalies, featureNames, onPatientClick }) {
+  const [host, size] = usePageCapacity({rowHeight: 126, reserved: 90, max: 4});
+  const [page, setPage] = useState(0);
   if (!anomalies) {
     return (
       <div className="panel flex items-center justify-center h-40">
@@ -100,8 +103,10 @@ function AnomalyWatchlist({ patients, anomalies, featureNames, onPatientClick })
       </div>
     );
   }
+  const pages = Math.max(1, Math.ceil(flagged.length / size));
+  const currentPage = Math.min(page, pages - 1);
   return (
-    <div className="space-y-3">
+    <div ref={host} className="mc-fit-card">
       <div className="flex items-center gap-2">
         <span className="text-xs font-semibold text-red-600 uppercase tracking-wide">
           {flagged.length} Anomalous Patient{flagged.length !== 1 ? "s" : ""} Detected
@@ -109,7 +114,7 @@ function AnomalyWatchlist({ patients, anomalies, featureNames, onPatientClick })
         <span className="text-xs text-slate-400">— statistical outliers from Isolation Forest</span>
       </div>
       <div className="space-y-2">
-        {flagged.map((p, i) => {
+        {flagged.slice(currentPage*size,(currentPage+1)*size).map((p, i) => {
           const origIdx = patients.indexOf(p);
           const score   = scores[origIdx] ?? null;
           return (
@@ -141,6 +146,7 @@ function AnomalyWatchlist({ patients, anomalies, featureNames, onPatientClick })
           );
         })}
       </div>
+      <Pager page={currentPage} pages={pages} onChange={setPage} label="Anomalous patients" />
     </div>
   );
 }
@@ -165,6 +171,7 @@ function EmptyState() {
 export default function DashboardPage() {
   // Onboarding hands over the dataset it just uploaded.
   const { state: navState } = useLocation();
+  const [setupView, setSetupView] = useState("dataset");
   const [dataset,         setDataset]         = useState(navState?.dataset ?? null);
   const [result,          setResult]          = useState(null);
   const [allResults,      setAllResults]      = useState(null);
@@ -179,6 +186,7 @@ export default function DashboardPage() {
 
   const handleDatasetLoaded = (ds) => {
     setDataset(ds);
+    setSetupView("algorithm");
     setResult(null);
     setAllResults(null);
     setWarnings([]);
@@ -263,6 +271,7 @@ export default function DashboardPage() {
   return (
     <Page
       title="Dashboard"
+      className="mc-dashboard-page"
       sub="Configure a dataset and algorithm, run clustering, and inspect the resulting risk tiers."
       actions={hasResults && <button type="button" onClick={exportPdf} className="btn-secondary text-sm h-9">Export PDF</button>}
     >
@@ -279,154 +288,26 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-10 items-start xl:grid-cols-[260px_minmax(0,1fr)_260px]">
-
-        {/* ── Dataset + algorithm ── */}
-        <div className="flex flex-col gap-8 min-w-0">
-          <UploadPanel onDatasetLoaded={handleDatasetLoaded} initialDataset={dataset} />
-          <AlgorithmSelector onRun={handleRun} disabled={!dataset} dataset={dataset} />
+      <div className="mc-dashboard-grid mc-dashboard-paged">
+        <div className="mc-dashboard-setup">
+          <ScreenViews label="Clustering setup" value={setupView} onChange={setSetupView} views={[
+            { id: "dataset", label: "Dataset", content: <UploadPanel onDatasetLoaded={handleDatasetLoaded} initialDataset={dataset} /> },
+            { id: "algorithm", label: "Algorithm", content: <AlgorithmSelector onRun={handleRun} disabled={!dataset} dataset={dataset} /> },
+          ]} />
         </div>
-
-        {/* ── Results ── */}
-        <div className="flex flex-col gap-6 min-w-0">
-          <Tabs label="Result views" options={TABS} value={activeTab} onChange={setActiveTab} />
-
-          <div id="dashboard-results" className="flex flex-col gap-8 min-w-0">
-            {!hasResults ? (
-              <div className="h-72 border border-dashed border-line-strong">
-                <EmptyState />
-              </div>
-            ) : (
-              <>
-                {activeTab === 0 && (
-                  <div className="h-[420px]">
-                    <ChartErrorBoundary
-                      title="Scatter plot"
-                      resetKey={`${runKey}-${result?.algorithm ?? ""}-${activePatients.length}`}
-                    >
-                      <ClusterScatterPlot
-                        patients={activePatients}
-                        featureNames={featureNames}
-                        onPatientClick={setSelectedPatient}
-                      />
-                    </ChartErrorBoundary>
-                  </div>
-                )}
-                {activeTab === 1 && (
-                  <ChartErrorBoundary
-                    title="Algorithm comparison"
-                    resetKey={`${runKey}-${Object.keys(allResults ?? {}).join("|")}`}
-                  >
-                    <ComparisonPanel allResults={allResults ?? {}} />
-                  </ChartErrorBoundary>
-                )}
-                {activeTab === 2 && (
-                  <ChartErrorBoundary
-                    title="Dendrogram"
-                    resetKey={`${runKey}-${linkageMatrix.length}-${activePatients.length}`}
-                  >
-                    <DendrogramView linkageMatrix={linkageMatrix} patients={activePatients} />
-                  </ChartErrorBoundary>
-                )}
-                {activeTab === 3 && (
-                  <AnomalyWatchlist
-                    patients={activePatients}
-                    anomalies={anomalies}
-                    featureNames={featureNames}
-                    onPatientClick={setSelectedPatient}
-                  />
-                )}
-              </>
-            )}
-
-            {activeTab === 0 && clusterProfiles.length > 0 && (
-              <ClusterTable profiles={clusterProfiles} />
-            )}
-
-            {activePatients.length > 0 && <PatientTable patients={activePatients} />}
-
-            {result && activePatients.length > 0 && (
-              <AIClusterInsights result={result} />
-            )}
-          </div>
-        </div>
-
-        {/* ── Tiers, quality, drivers ── */}
-        <div className="flex flex-col gap-8 min-w-0">
-          <ChartErrorBoundary
-            title="Risk distribution"
-            resetKey={`${runKey}-${JSON.stringify(activeRiskDist)}`}
-          >
-            <RiskBars riskDistribution={activeRiskDist} />
-          </ChartErrorBoundary>
-
-          <MetricsPanel metrics={activeMetrics} />
-
-          {featureImportance.length > 0 && (
-            <div className="panel space-y-2 fade-in">
-              <p className="section-label">Feature drivers</p>
-              <p className="text-xs text-slate-400 -mt-1">What drives cluster separation</p>
-              {featureImportance.map(({ feature, importance }) => (
-                <div key={feature} className="space-y-0.5">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-600 font-mono truncate max-w-[110px]">{feature}</span>
-                    <span className="text-slate-400">{Math.round(importance * 100)}%</span>
-                  </div>
-                  <div className="w-full bg-sunken h-1.5">
-                    <div className="h-1.5 bg-ink" style={{ width: `${importance * 100}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* SHAP Explainability Panel */}
-          {result && activePatients.length > 0 && (
-            <div className="panel space-y-2 fade-in">
-              <div className="flex items-center justify-between">
-                <p className="section-label mb-0">SHAP Explainability</p>
-                {!shapData && (
-                  <button
-                    onClick={loadShap}
-                    disabled={shapLoading}
-                    className="text-xs text-blue-600 underline underline-offset-2 hover:text-ink disabled:opacity-50 flex items-center gap-1"
-                  >
-                    {shapLoading ? <><div className="spinner w-3 h-3" />Loading…</> : "Load"}
-                  </button>
-                )}
-              </div>
-              {!shapData && !shapLoading && (
-                <p className="text-xs text-slate-400">Click Load to compute SHAP feature drivers.</p>
-              )}
-              {shapLoading && (
-                <p className="text-xs text-slate-400 flex items-center gap-1.5"><div className="spinner w-3 h-3" />Computing SHAP values…</p>
-              )}
-              {shapData?.feature_importances && (
-                <div className="space-y-1.5">
-                  {Object.entries(shapData.feature_importances)
-                    .sort((a, b) => b[1] - a[1])
-                    .slice(0, 8)
-                    .map(([feat, val]) => {
-                      const max = Math.max(...Object.values(shapData.feature_importances));
-                      const pct = max > 0 ? (val / max) * 100 : 0;
-                      return (
-                        <div key={feat} className="space-y-0.5">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-slate-600 font-mono truncate max-w-[110px]">{feat}</span>
-                            <span className="text-slate-600 font-mono">{val.toFixed(3)}</span>
-                          </div>
-                          <div className="w-full bg-sunken h-1.5">
-                            <div className="h-1.5 bg-ink" style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  <p className="text-xs text-slate-300 pt-1">Mean |SHAP| per feature</p>
-                </div>
-              )}
-            </div>
-          )}
-
+        <div id="dashboard-results" className="mc-dashboard-results-content mc-dashboard-panes">
+          <ScreenViews label="Result views" value={String(activeTab)} onChange={value=>setActiveTab(Number(value))} views={[
+            { id: "0", label: "Scatter", content: hasResults ? <div className="mc-result-chart"><ChartErrorBoundary title="Scatter plot" resetKey={`${runKey}-${result?.algorithm}-${activePatients.length}`}><ClusterScatterPlot patients={activePatients} featureNames={featureNames} onPatientClick={setSelectedPatient} /></ChartErrorBoundary></div> : <EmptyState /> },
+            { id: "1", label: "Comparison", content: <ComparisonPanel allResults={allResults ?? {}} /> },
+            { id: "2", label: "Dendrogram", content: <DendrogramView linkageMatrix={linkageMatrix} patients={activePatients} /> },
+            { id: "3", label: "Anomalies", content: hasResults ? <AnomalyWatchlist patients={activePatients} anomalies={anomalies} featureNames={featureNames} onPatientClick={setSelectedPatient} /> : <EmptyState /> },
+            { id: "4", label: "Risk & quality", content: <div className="mc-result-quality"><RiskBars riskDistribution={activeRiskDist} /><MetricsPanel metrics={activeMetrics} /></div> },
+            { id: "5", label: "Clusters", content: clusterProfiles.length ? <ClusterTable profiles={clusterProfiles} /> : <EmptyState /> },
+            { id: "6", label: "Patients", content: <PatientTable patients={activePatients} /> },
+            { id: "7", label: "AI insights", content: result ? <AIClusterInsights result={result} /> : <EmptyState /> },
+            { id: "8", label: "Drivers", content: <div className="mc-fit-card"><h2>Feature drivers</h2><p className="text-xs text-slate-500">What drives cluster separation</p>{featureImportance.length ? featureImportance.map(({feature,importance})=><div key={feature} className="space-y-1"><div className="flex justify-between text-xs"><span>{feature}</span><span>{Math.round(importance*100)}%</span></div><div className="h-1.5 bg-sunken"><div className="h-full bg-ink" style={{width:`${importance*100}%`}} /></div></div>):<p className="text-sm text-slate-500">Run clustering to inspect feature drivers.</p>}</div> },
+            { id: "9", label: "SHAP", content: <div className="mc-fit-card"><div className="flex items-center justify-between gap-3"><h2>SHAP explainability</h2><button type="button" className="btn-secondary text-xs" onClick={loadShap} disabled={!activePatients.length||shapLoading}>{shapLoading?"Computing…":"Load"}</button></div>{!shapData&&!shapLoading&&<p className="text-sm text-slate-500">Load feature attributions for the current clustering result.</p>}{Object.entries(shapData?.feature_importances||{}).sort((a,b)=>b[1]-a[1]).slice(0,8).map(([feature,value])=><div className="flex justify-between text-sm" key={feature}><span>{feature}</span><span className="font-mono">{value.toFixed(3)}</span></div>)}</div> },
+          ]} />
         </div>
       </div>
 
@@ -450,9 +331,13 @@ const CLUSTER_COLS = [
 
 // Per-cluster size and centroid vitals, ordered by cluster id.
 function ClusterTable({ profiles }) {
+  const [host, size] = usePageCapacity({rowHeight: 46, reserved: 70, max: 10});
+  const [page, setPage] = useState(0);
   const rows = [...profiles].sort((a, b) => a.cluster_id - b.cluster_id);
+  const pages = Math.max(1, Math.ceil(rows.length / size));
+  const currentPage = Math.min(page, pages - 1);
   return (
-    <div className="overflow-x-auto">
+    <div ref={host} className="mc-fit-card">
       <table className="w-full text-[13px]">
         <thead>
           <tr className="eyebrow text-left border-b border-ink">
@@ -463,7 +348,7 @@ function ClusterTable({ profiles }) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((cp) => (
+          {rows.slice(currentPage*size,(currentPage+1)*size).map((cp) => (
             <tr key={cp.cluster_id} className="border-b border-line">
               <td className="py-3 font-mono">C{cp.cluster_id}</td>
               <td className="py-3 font-mono text-right">{cp.size}</td>
@@ -476,6 +361,7 @@ function ClusterTable({ profiles }) {
           ))}
         </tbody>
       </table>
+      <Pager page={currentPage} pages={pages} onChange={setPage} label="Cluster summaries" />
     </div>
   );
 }

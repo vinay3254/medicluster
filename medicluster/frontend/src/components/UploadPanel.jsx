@@ -46,7 +46,7 @@ export default function UploadPanel({ onDatasetLoaded, initialDataset = null }) 
   };
 
   return (
-    <Section title="Dataset">
+    <Section title="Dataset" className="mc-dataset-card">
       {!dataset ? (
         <div className="flex flex-col gap-3 pt-3">
           <div

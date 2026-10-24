@@ -15,7 +15,7 @@ const MAP_OPTIONS = {
 };
 
 function hospitalIcon(isHospital) {
-  const color = isHospital ? '#c23a34' : '#2447c9';
+  const color = isHospital ? '#c23a34' : '#ad633f';
   const svg = encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
       <rect x="1" y="1" width="30" height="30" rx="8" fill="${color}" stroke="white" stroke-width="2"/>
@@ -34,7 +34,7 @@ function userLocationIcon() {
   return {
     path: window.google.maps.SymbolPath.CIRCLE,
     scale: 10,
-    fillColor: '#2447c9',
+    fillColor: '#ad633f',
     fillOpacity: 1,
     strokeColor: '#ffffff',
     strokeWeight: 3,
@@ -323,7 +323,7 @@ export default function NearbyHospitalsPage() {
                     <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 3, color: '#222428' }}>
                       {hospitals[selectedIdx].name}
                     </div>
-                    <div style={{ color: '#6c6e73', fontSize: 11 }}>
+                    <div style={{ color: '#62675e', fontSize: 11 }}>
                       {hospitals[selectedIdx].distKm.toFixed(1)} km away
                       {hospitals[selectedIdx].rating ? ` · ${hospitals[selectedIdx].rating} rating` : ''}
                     </div>
@@ -337,7 +337,7 @@ export default function NearbyHospitalsPage() {
                       target="_blank" rel="noreferrer"
                       style={{
                         display: 'inline-block', marginTop: 7, padding: '3px 10px',
-                        background: '#2447c9', color: 'white', borderRadius: 5,
+                        background: '#ad633f', color: 'white', borderRadius: 5,
                         fontSize: 11, fontWeight: 600, textDecoration: 'none',
                       }}
                     >

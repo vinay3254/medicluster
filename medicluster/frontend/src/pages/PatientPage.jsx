@@ -1,189 +1,33 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getMediaFileUrl, getPatientClusterHistory, getPatientProfile, listPatientMedia, listReminders, updatePatientProfile } from "../api/apiClient";
-import {
-  TIER_RANK, VITALS, adherence7d, flagReason, fmtVital, loadLatestRuns, runId, shortDate, vitalStatus,
-} from "../data/clinical";
-import { Page, Section, Tag, linkCls } from "../components/ui";
+import { TIER_RANK, VITALS, adherence7d, flagReason, fmtVital, loadLatestRuns, runId, shortDate, vitalStatus } from "../data/clinical";
+import { Page, Tag, linkCls } from "../components/ui";
+import { Pager, ScreenViews, usePageCapacity } from "../components/viewport-ui";
+import "./records-viewport.css";
 
-const TIER_BAR = { Low: "bg-risk-low", Moderate: "bg-risk-moderate", High: "bg-risk-high", Critical: "bg-risk-critical" };
-const STATUS_TEXT = { High: "text-red-700", Low: "text-amber-700", Normal: "text-green-700" };
-
-function sexLabel(g) {
-  const s = String(g || "").toLowerCase();
-  return s.startsWith("f") ? "F" : s.startsWith("m") ? "M" : "";
+function RecordRows({ items, render, label, empty = "None recorded.", rowHeight = 76 }) {
+  const [ref, size] = usePageCapacity({ rowHeight, reserved: 0, max: 100 });
+  const [page, setPage] = useState(0);
+  const pages = Math.max(1, Math.ceil(items.length / size));
+  const active = Math.min(page, pages - 1);
+  useEffect(() => setPage(0), [items]);
+  return <div className="record-paged-list"><div className="record-rows" ref={ref}>
+    {items.length ? items.slice(active * size, (active + 1) * size).map((item, i) => <div className="record-row" style={{ minHeight: rowHeight }} key={item._id || item.fileId || item.resultId || item.patient_id || item.key || i}>{render(item)}</div>) : <p>{empty}</p>}
+  </div><Pager page={active} pages={pages} onChange={setPage} label={label} /></div>;
 }
 
-// ── Roster ────────────────────────────────────────────────────────────────────
 function Roster({ patients, selectedId, onPick }) {
   const [q, setQ] = useState("");
-  const term = q.trim().toLowerCase();
-  const rows = term ? patients.filter((p) => String(p.patient_id).toLowerCase().includes(term)) : patients;
-
-  const submit = (e) => {
-    e.preventDefault();
-    if (term && !rows.length) onPick(q.trim());
-    else if (rows.length) onPick(rows[0].patient_id);
-  };
-
-  return (
-    <div className="flex flex-col gap-5 min-w-0">
-      <form onSubmit={submit}>
-        <input value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search patients"
-          placeholder={patients.length ? `Search ${patients.length.toLocaleString()} patients` : "Patient ID"}
-          className="h-9 w-full px-3 border border-line-strong rounded-[3px] bg-surface text-[13px] focus:outline-none focus:border-ink" />
-      </form>
-      {patients.length > 0 && (
-        <div>
-          <div className="flex justify-between eyebrow pb-2 border-b border-ink"><span>Patient</span><span>Tier</span></div>
-          <ul className="max-h-[70vh] overflow-y-auto" aria-label="Patients">
-            {rows.slice(0, 200).map((p) => {
-              const on = p.patient_id === selectedId;
-              return (
-                <li key={p.patient_id}>
-                  <button type="button" onClick={() => onPick(p.patient_id)} aria-current={on ? "true" : undefined}
-                    className={`w-full flex justify-between items-center gap-3 px-2 py-2.5 border-b border-line text-left ${on ? "bg-ink text-paper" : "hover:bg-sunken"}`}>
-                    <span className="flex flex-col min-w-0">
-                      <span className="text-[13.5px] font-medium">{p.patient_id}</span>
-                      <span className={`font-mono text-[11px] ${on ? "text-paper/70" : "text-slate-500"}`}>
-                        {[p.age != null && `${Math.round(p.age)}${sexLabel(p.gender)}`, `C${p.cluster_id}`].filter(Boolean).join(" · ")}
-                      </span>
-                    </span>
-                    <Tag tone={p.risk_tier} className={on ? "!border-paper !text-paper" : ""} />
-                  </button>
-                </li>
-              );
-            })}
-            {rows.length === 0 && <li className="py-3 text-[13px] text-slate-500">No match. Press Enter to open “{q.trim()}”.</li>}
-          </ul>
-        </div>
-      )}
-    </div>
-  );
+  const rows = useMemo(() => patients.filter(p => String(p.patient_id).toLowerCase().includes(q.trim().toLowerCase())), [patients, q]);
+  return <section className="record-card record-roster" aria-label="Patient roster">
+    <h2>Patient directory <span>{patients.length}</span></h2>
+    <form onSubmit={e => { e.preventDefault(); onPick(rows[0]?.patient_id || q.trim()); }}>
+      <input className="input-field" value={q} onChange={e => setQ(e.target.value)} aria-label="Search patients" placeholder="Search by patient ID" />
+    </form>
+    <RecordRows items={rows} rowHeight={64} label="Patient directory pages" empty="No match. Enter an ID and press Enter to open their record." render={p => <button type="button" className={`record-patient-pick ${selectedId === p.patient_id ? "is-selected" : ""}`} aria-current={selectedId === p.patient_id ? "true" : undefined} onClick={() => onPick(p.patient_id)}><span><strong>{p.patient_id}</strong><small>{p.age != null ? Math.round(p.age) : "Age unknown"} · {p.gender || ""} · C{p.cluster_id}</small></span><Tag tone={p.risk_tier} /></button>} />
+  </section>;
 }
-
-// ── Profile pieces ────────────────────────────────────────────────────────────
-function RangeBar({ v, value }) {
-  const [a, b] = v.axis;
-  const pos = (x) => `${Math.max(0, Math.min(100, ((x - a) / (b - a)) * 100))}%`;
-  const status = vitalStatus(v, value);
-  return (
-    <div className="relative h-3" aria-hidden="true">
-      <div className="absolute inset-x-0 top-1/2 h-px bg-line-strong" />
-      <div className="absolute top-1/2 -translate-y-1/2 h-1.5 bg-risk-low/30" style={{ left: pos(v.ref[0]), width: `calc(${pos(v.ref[1])} - ${pos(v.ref[0])})` }} />
-      {typeof value === "number" && (
-        <div className={`absolute top-0 h-3 w-0.5 ${status === "Normal" ? "bg-risk-low" : "bg-risk-high"}`} style={{ left: pos(value) }} />
-      )}
-    </div>
-  );
-}
-
-function VitalsTable({ patient }) {
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-[13px] min-w-[560px]">
-        <thead>
-          <tr className="eyebrow text-left border-b border-ink">
-            <th className="py-2 font-normal">Measure</th>
-            <th className="py-2 font-normal text-right pr-4">Value</th>
-            <th className="py-2 font-normal w-[38%]">Reference range</th>
-            <th className="py-2 font-normal pl-4">Ref</th>
-            <th className="py-2 font-normal text-right">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {VITALS.map((v) => {
-            const value = patient[v.key];
-            const status = vitalStatus(v, value);
-            return (
-              <tr key={v.key} className="border-b border-line">
-                <td className="py-3">{v.label}</td>
-                <td className="py-3 text-right pr-4 whitespace-nowrap">
-                  <span className="font-mono text-[16px]">{fmtVital(v, value)}</span>
-                  <span className="text-[11px] text-slate-500 ml-1">{v.unit}</span>
-                </td>
-                <td className="py-3"><RangeBar v={v} value={value} /></td>
-                <td className="py-3 pl-4 font-mono text-slate-500 whitespace-nowrap">{v.ref[0]}–{v.ref[1]}</td>
-                <td className={`py-3 text-right font-mono text-[11px] tracking-[0.04em] uppercase ${STATUS_TEXT[status] ?? "text-slate-500"}`}>
-                  {status ?? "—"}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function History({ clusterHistory, media }) {
-  const events = [
-    ...clusterHistory.map((h) => ({
-      at: h.createdAt, key: `c-${h.resultId}`,
-      text: `Assigned ${h.risk_tier} tier, cluster C${h.cluster_id}`,
-      src: `Clustering · ${runId({ _id: h.resultId })}`,
-      to: `/results/${h.resultId}`,
-    })),
-    ...media.map((m) => ({
-      at: m.uploadedAt, key: `m-${m.fileId}`,
-      text: `Uploaded ${m.filename}`,
-      src: "Imaging",
-      href: getMediaFileUrl(m.fileId),
-    })),
-  ].sort((a, b) => new Date(b.at) - new Date(a.at));
-
-  return (
-    <Section title="History">
-      {events.length === 0 && <p className="py-3 text-[13px] text-slate-500">No clustering runs or uploads yet.</p>}
-      <ol className="pt-1">
-        {events.map((e, i) => (
-          <li key={e.key} className="grid grid-cols-[56px_12px_minmax(0,1fr)] gap-3 pt-3">
-            <span className="font-mono text-xs text-slate-500">{shortDate(e.at)}</span>
-            <span className="flex flex-col items-center" aria-hidden="true">
-              <span className="w-2 h-2 bg-ink mt-1" />
-              {i < events.length - 1 && <span className="flex-1 w-px bg-line-strong mt-1" />}
-            </span>
-            <span className="flex flex-col gap-0.5 pb-2 min-w-0">
-              {e.to ? <Link to={e.to} className="text-[13.5px] hover:underline">{e.text}</Link>
-                : <a href={e.href} target="_blank" rel="noreferrer" className="text-[13.5px] hover:underline truncate">{e.text}</a>}
-              <span className="text-xs text-slate-500">{e.src}</span>
-            </span>
-          </li>
-        ))}
-      </ol>
-    </Section>
-  );
-}
-
-function Medications({ reminders, patientId }) {
-  return (
-    <Section title="Medications" aside={<span className="eyebrow">7-day adherence</span>}>
-      {reminders.length === 0 && (
-        <p className="py-3 text-[13px] text-slate-500">
-          No medication schedules. <Link to={`/reminders/${encodeURIComponent(patientId)}`} className={linkCls}>Add one</Link>
-        </p>
-      )}
-      {reminders.map((r) => {
-        const pct = adherence7d(r);
-        const tone = pct == null ? "" : pct >= 0.9 ? "bg-risk-low" : pct >= 0.75 ? "bg-risk-moderate" : "bg-risk-high";
-        return (
-          <div key={r._id} className="grid grid-cols-[minmax(0,1fr)_60px_44px] gap-3 items-center py-3 border-b border-line">
-            <span className="flex flex-col min-w-0">
-              <span className="text-[13.5px] truncate">{r.medicationName} <span className="font-mono text-slate-500 text-xs">{r.dosage}</span></span>
-              <span className="text-xs text-slate-500">
-                {[r.times?.length ? `${r.times.length}× ${r.frequency}` : r.frequency, !r.active && "paused"].filter(Boolean).join(" · ")}
-              </span>
-            </span>
-            <span className="h-1 bg-sunken" aria-hidden="true"><span className={`block h-full ${tone}`} style={{ width: `${(pct ?? 0) * 100}%` }} /></span>
-            <span className="font-mono text-[13px] text-right">{pct == null ? "—" : `${Math.round(pct * 100)}%`}</span>
-          </div>
-        );
-      })}
-    </Section>
-  );
-}
-
-// Links the mobile number the patient signs in to the patient app with.
 function AppSignIn({ patientId }) {
   const [saved, setSaved] = useState("");
   const [value, setValue] = useState("");
@@ -236,101 +80,45 @@ function summarize(history, patient) {
 }
 
 function Profile({ patientId, patient }) {
-  const [clusterHistory, setClusterHistory] = useState([]);
+  const [history, setHistory] = useState([]);
   const [media, setMedia] = useState([]);
   const [reminders, setReminders] = useState([]);
-
   useEffect(() => {
     let alive = true;
-    setClusterHistory([]); setMedia([]); setReminders([]);
-    getPatientClusterHistory(patientId).then((h) => alive && setClusterHistory(h)).catch(() => {});
-    listPatientMedia(patientId).then((m) => alive && setMedia(m)).catch(() => {});
-    listReminders(patientId).then((r) => alive && setReminders(r)).catch(() => {});
+    setHistory([]); setMedia([]); setReminders([]);
+    getPatientClusterHistory(patientId).then(v => alive && setHistory(v)).catch(() => {});
+    listPatientMedia(patientId).then(v => alive && setMedia(v)).catch(() => {});
+    listReminders(patientId).then(v => alive && setReminders(v)).catch(() => {});
     return () => { alive = false; };
   }, [patientId]);
-
-  const tier = clusterHistory[0]?.risk_tier ?? patient?.risk_tier;
-  const trend = [...clusterHistory].reverse().slice(-6);
-  const summary = summarize(clusterHistory, patient);
+  const tier = history[0]?.risk_tier ?? patient?.risk_tier;
+  const summary = summarize(history, patient);
   const pid = encodeURIComponent(patientId);
-
-  return (
-    <div className="flex flex-col gap-8 min-w-0">
-      <div className="flex justify-between gap-6 flex-wrap items-end">
-        <div className="flex flex-col gap-1.5">
-          <span className="eyebrow">{patientId}{patient && ` · Cluster C${patient.cluster_id}`}</span>
-          <h2 className="font-serif text-[44px] leading-none tracking-[-0.02em]">{patientId}</h2>
-          <span className="text-[13px] text-slate-600">
-            {[patient?.age != null && Math.round(patient.age), patient?.gender, clusterHistory[0] && `Last clustered ${shortDate(clusterHistory[0].createdAt)}`]
-              .filter(Boolean).join(" · ") || "Not in the latest clustering run"}
-          </span>
-        </div>
-        {tier && (
-          <div className="flex flex-col items-end gap-2">
-            {trend.length > 1 && (
-              <div className="flex items-end gap-1 h-8" aria-label={`Risk history: ${trend.map((t) => t.risk_tier).join(", ")}`}>
-                {trend.map((t, i) => (
-                  <span key={t.resultId} className={`w-2.5 ${i === trend.length - 1 ? TIER_BAR[t.risk_tier] : "bg-line-strong"}`}
-                    style={{ height: `${(TIER_RANK[t.risk_tier] ?? 1) * 25}%` }} />
-                ))}
-              </div>
-            )}
-            <span className="flex items-center gap-2 eyebrow">Risk <Tag tone={tier} /></span>
-          </div>
-        )}
-      </div>
-
-      {summary && <p className="font-serif text-[22px] leading-snug max-w-[640px]">{summary}</p>}
-
-      <div className="flex flex-col gap-4 pb-6 border-b border-line">
-        <div className="flex gap-5 flex-wrap text-[13px]">
-          <Link to="/predict" className={linkCls}>Re-run prediction</Link>
-          <Link to={`/reminders/${pid}`} className={linkCls}>Medication reminders</Link>
-          <Link to="/imaging" className={linkCls}>Imaging</Link>
-        </div>
-        <AppSignIn patientId={patientId} />
-      </div>
-
-      {patient ? <VitalsTable patient={patient} /> : (
-        <p className="text-[13px] text-slate-500">Vitals come from the latest clustering run; this patient isn’t in it.</p>
-      )}
-
-      <div className="grid gap-10 lg:grid-cols-2">
-        <History clusterHistory={clusterHistory} media={media} />
-        <Medications reminders={reminders} patientId={patientId} />
-      </div>
-    </div>
-  );
+  return <div className="record-profile">
+    <header className="record-identity"><h2>{patientId}</h2>{tier && <Tag tone={tier} />}</header>
+    <ScreenViews key={patientId} label="Patient record sections" views={[
+      { id: "summary", label: "Summary", content: <section className="record-card record-summary"><h2>Patient overview</h2><p>{[patient?.age != null && `${Math.round(patient.age)} years`, patient?.gender, patient && `Cluster C${patient.cluster_id}`].filter(Boolean).join(" · ") || "Not in the latest clustering run"}</p><p>{summary || "No clustering history is available yet."}</p><p>{history[0] && `Last clustered ${shortDate(history[0].createdAt)}`}</p><div className="record-links"><Link className="btn-primary" to="/predict">Re-run prediction</Link><Link className="btn-secondary" to={`/reminders/${pid}`}>Medication reminders</Link><Link className="btn-secondary" to="/imaging">Imaging</Link></div></section> },
+      { id: "vitals", label: "Vitals", content: <section className="record-card"><h2>Vitals & reference ranges</h2>{patient ? <RecordRows label="Vital pages" items={VITALS} render={v => <div className="record-value"><span><strong>{v.label}</strong><small>Reference {v.ref[0]}–{v.ref[1]} {v.unit}</small></span><span>{fmtVital(v, patient[v.key])} {v.unit}<small>{vitalStatus(v, patient[v.key]) || "Not recorded"}</small></span></div>} /> : <p>Vitals come from the latest clustering run; this patient isn’t in it.</p>}</section> },
+      { id: "history", label: "History", content: <section className="record-card"><h2>Clustering history</h2><RecordRows label="History pages" items={history} render={h => <Link className="record-history-link" to={`/results/${h.resultId}`}><strong>{h.risk_tier} risk · Cluster C{h.cluster_id}</strong><small>{shortDate(h.createdAt)} · {runId({ _id: h.resultId })}</small></Link>} /></section> },
+      { id: "medicines", label: "Medicines", content: <section className="record-card"><div className="record-card-title"><h2>Medication schedules</h2><Link className={linkCls} to={`/reminders/${pid}`}>Manage</Link></div><RecordRows label="Medicine pages" items={reminders} render={r => <div><strong>{r.medicationName} {r.dosage}</strong><small>{r.times?.length ? `${r.times.length}× ` : ""}{r.frequency}{!r.active && " · paused"} · {adherence7d(r) == null ? "No doses due" : `${Math.round(adherence7d(r) * 100)}% taken (7 d)`}</small></div>} /></section> },
+      { id: "files", label: "Files", content: <section className="record-card"><h2>Imaging & files</h2><RecordRows label="File pages" items={media} render={m => <a href={getMediaFileUrl(m.fileId)} target="_blank" rel="noreferrer"><strong>{m.filename}</strong><small>{shortDate(m.uploadedAt)} · Open file ↗</small></a>} /></section> },
+      { id: "access", label: "Access", content: <section className="record-card record-access"><h2>Patient app access</h2><p>Link the mobile number the patient uses to sign in to the patient app.</p><AppSignIn key={patientId} patientId={patientId} /></section> },
+    ]} />
+  </div>;
 }
 
 export default function PatientPage() {
   const { patientId } = useParams();
   const navigate = useNavigate();
   const [roster, setRoster] = useState([]);
-
-  useEffect(() => {
-    let alive = true;
-    loadLatestRuns().then(({ latest }) => alive && setRoster(latest?.patients ?? [])).catch(() => {});
-    return () => { alive = false; };
-  }, []);
-
-  const sorted = useMemo(
-    () => [...roster].sort((a, b) => (TIER_RANK[b.risk_tier] ?? 0) - (TIER_RANK[a.risk_tier] ?? 0)),
-    [roster]
-  );
-  const patient = roster.find((p) => p.patient_id === patientId);
-  const pick = (id) => navigate(`/patient/${encodeURIComponent(id)}`);
-
-  return (
-    <Page title="Patients" sub="Look up a patient to see their profile, vitals, risk tier and history.">
-      <div className="grid gap-10 items-start lg:grid-cols-[330px_minmax(0,1fr)]">
-        <Roster patients={sorted} selectedId={patientId} onPick={pick} />
-        {patientId ? <Profile patientId={patientId} patient={patient} /> : (
-          <p className="text-[13px] text-slate-500 border-t border-ink pt-6">
-            {sorted.length ? "Pick a patient from the list, or search by ID." : "Search by patient ID. Run clustering to populate the patient list."}
-          </p>
-        )}
-      </div>
-    </Page>
-  );
+  const [showProfile, setShowProfile] = useState(Boolean(patientId));
+  useEffect(() => { let alive = true; loadLatestRuns().then(({ latest }) => alive && setRoster(latest?.patients ?? [])).catch(() => {}); return () => { alive = false; }; }, []);
+  useEffect(() => setShowProfile(Boolean(patientId)), [patientId]);
+  const sorted = useMemo(() => [...roster].sort((a, b) => (TIER_RANK[b.risk_tier] ?? 0) - (TIER_RANK[a.risk_tier] ?? 0)), [roster]);
+  return <Page className="records-page" title="Patients" sub="Look up a patient to see their profile, vitals, risk tier and history.">
+    <div className={`record-layout ${showProfile ? "record-show-profile" : ""}`}>
+      <Roster patients={sorted} selectedId={patientId} onPick={id => { if (id) { navigate(`/patient/${encodeURIComponent(id)}`); setShowProfile(true); } }} />
+      <div className="record-profile-pane"><button type="button" className="record-back btn-secondary" onClick={() => setShowProfile(false)}>← Patient directory</button>{patientId ? <Profile patientId={patientId} patient={roster.find(p => p.patient_id === patientId)} /> : <section className="record-card"><h2>Patient record</h2><p>Pick a patient from the directory or search by ID.</p></section>}</div>
+    </div>
+  </Page>;
 }

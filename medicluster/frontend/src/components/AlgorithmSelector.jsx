@@ -62,8 +62,9 @@ export default function AlgorithmSelector({ onRun, disabled, dataset }) {
   const showRecommendBtn = (selected === "kmeans" || selected === "gmm" || selected === "hierarchical") && !disabled;
 
   return (
-    <Section title="Algorithm">
-      <div role="radiogroup" aria-label="Algorithm" className="flex flex-col pt-1">
+    <Section title="Algorithm" className="mc-algorithm-card">
+      <div className="mc-algorithm-content">
+      <div role="radiogroup" aria-label="Algorithm" className="mc-algorithm-options flex flex-col pt-1">
         {ALGORITHMS.map((algo) => {
           const on = selected === algo.id;
           return (
@@ -76,7 +77,7 @@ export default function AlgorithmSelector({ onRun, disabled, dataset }) {
       </div>
 
       {/* Dynamic parameter controls */}
-      <div className="flex flex-col gap-4 pt-4 text-sm">
+      <div className="mc-algorithm-parameters flex flex-col gap-4 pt-4 text-sm">
         {selected === "kmeans" && (
           <>
             <SliderField
@@ -191,12 +192,13 @@ export default function AlgorithmSelector({ onRun, disabled, dataset }) {
         </div>
       )}
 
+      </div>
       {/* Run button */}
       <button
         type="button"
         onClick={handleRun}
         disabled={disabled || loading}
-        className="btn-primary w-full h-10 mt-5"
+        className="mc-cluster-run btn-primary w-full h-10 mt-5"
       >
         {loading ? (
           <>

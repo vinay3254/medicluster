@@ -92,12 +92,12 @@ export default function ProfileScreen() {
       <Body>
         <form onSubmit={save} className="p-[22px] flex flex-col gap-[22px]">
           <ErrorNote>{error}</ErrorNote>
-          <div className="flex flex-col gap-3">
+          <div className="mc-patient-card flex flex-col gap-3">
             <ListHeader title="You" meta={patientId} />
             <Field label="Name"><input value={form.name} onChange={set("name")} className={field} autoComplete="name" /></Field>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="mc-patient-card flex flex-col gap-3">
             <ListHeader title="Next visit" />
             <Field label="Date and time"><input type="datetime-local" value={form.visitAt} onChange={set("visitAt")} className={field} /></Field>
             <Field label="Doctor"><input value={form.doctor} onChange={set("doctor")} placeholder="Dr. A. Rao" className={field} /></Field>
@@ -108,7 +108,7 @@ export default function ProfileScreen() {
             </Field>
           </div>
 
-          <div className="flex flex-col gap-3">
+          <div className="mc-patient-card flex flex-col gap-3">
             <ListHeader title="Emergency contact" />
             <Field label="Name"><input value={form.contactName} onChange={set("contactName")} className={field} /></Field>
             <Field label="Relation"><input value={form.contactRelation} onChange={set("contactRelation")} placeholder="son, daughter, spouse…" className={field} /></Field>

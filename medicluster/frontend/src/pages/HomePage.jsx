@@ -24,7 +24,7 @@ function Headline({ latest, prev }) {
   }
 
   return (
-    <section className="flex flex-col gap-[18px] py-7 border-t border-b border-t-ink border-b-line">
+    <section className="mc-overview-summary flex flex-col gap-[18px]">
       <div className="flex justify-between gap-6 flex-wrap items-end">
         <p className="font-serif text-[30px] leading-[1.2] tracking-[-0.01em] max-w-[640px]">
           {critical.toLocaleString()} of {total.toLocaleString()} patients fall in the{" "}
@@ -103,7 +103,7 @@ function RecentRuns({ runs }) {
         <Link key={r._id} to={`/results/${r._id}`}
           className={`${rowCls} grid-cols-[76px_minmax(0,1fr)_auto_44px] hover:bg-sunken`}>
           <span className="font-mono text-slate-600">{runId(r)}</span>
-          <span>{runLabel(r)}</span>
+          <span className="min-w-0 break-words">{runLabel(r)}</span>
           <span className="text-slate-500">{when(r.createdAt)}</span>
           <span className="font-mono text-right">
             {typeof r.metrics?.silhouette === "number" ? r.metrics.silhouette.toFixed(2) : "—"}
@@ -122,22 +122,12 @@ const STEPS = [
 
 function GettingStarted() {
   return (
-    <>
-      <section className="grid grid-cols-[repeat(auto-fit,minmax(min(220px,100%),1fr))] border-t border-ink">
-        {STEPS.map((s) => (
-          <div key={s.n} className="pt-5 pr-6 pb-6 flex flex-col gap-2 border-b border-line">
-            <span className="font-serif text-[34px] text-slate-500 leading-none">{s.n}</span>
-            <span className="font-semibold">{s.title}</span>
-            <span className="text-[13px] text-slate-600 leading-normal">{s.body}</span>
-          </div>
-        ))}
-      </section>
-      <div>
-        <Link to="/dashboard" className="inline-flex items-center h-[38px] px-[18px] rounded-[3px] bg-ink text-paper font-medium hover:bg-slate-800">
-          Open Dashboard
-        </Link>
+    <section className="mc-section-card" aria-label="Getting started">
+      <div className="mc-section-heading"><h2>From data to a clearer picture.</h2></div>
+      <div className="mc-setup-steps">
+        {STEPS.map(s => <div key={s.n} className="mc-setup-step"><span>{s.n}</span><div><h3>{s.title}</h3><p>{s.body}</p></div></div>)}
       </div>
-    </>
+    </section>
   );
 }
 

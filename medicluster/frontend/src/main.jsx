@@ -5,6 +5,7 @@ import App from "./App";
 import { AuthProvider } from "./auth/AuthContext";
 import { AppStartup } from "./components/SplashScreen";
 import "./index.css";
+import "./workspace-cards.css";
 import "./installPrompt";
 
 function Root() {
