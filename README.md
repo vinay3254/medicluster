@@ -1,252 +1,302 @@
-# MediCluster
+<div align="center">
 
-Patient risk analysis, a patient portal, and ambulance dispatch applications.
+<img src="docs/images/medicluster-brand.png" alt="MediCluster Logo" width="460" />
 
-## Repository structure
+### Next-Gen Unified Healthcare Platform & Emergency Dispatch Ecosystem
 
-```text
-medicluster/
-  frontend/       React clinician dashboard and patient app (/app)
-  backend/        Express API, Supabase records, staff and patient authentication
-  ml-engine/      Flask clustering, risk analysis, imaging, NLP and forecasting
-  patient-android/ Native patient-only Android APK and build instructions
-  crew-android/    Native crew-only Android APK and build instructions
-  Dockerfile      Combined frontend/backend deployment
-  docker-compose.yml
-ambulance-dispatch/
-  frontend/
-    dispatcher-dashboard/   Dispatcher dashboard and crew app
-      supabase/             Database migrations and driver-login Edge Function
-    police-dashboard/       Police dashboard
-  backend/
-    api/                    Express dispatch API
-    auth/                   Authentication service
-    websocket/              Socket.IO server
-    services/               Dispatch, routing, siren detection and other services
-  mobile/                   React Native citizen and driver apps
-  infrastructure/           Database, routing, cache and failover configuration
-  tests/                    Dispatch load tests
+[![React](https://img.shields.io/badge/React-18-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![Python](https://img.shields.io/badge/Python-3.12%2F3.14-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Realtime-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Android](https://img.shields.io/badge/Android-Native_APKs-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+
+<br/>
+
+<img src="docs/images/hero-landing.png" alt="MediCluster Hero" width="100%" />
+
+</div>
+
+---
+
+## ⚡ Overview
+
+**MediCluster** bridges acute emergency dispatch and hospital clinical workflows into a single cohesive ecosystem. It unifies patient engagement, CAD ambulance routing, native mobile apps, and state-of-the-art diagnostic deep learning.
+
+<br/>
+
+<img src="docs/images/platform-overview.png" alt="MediCluster Platform Overview" width="100%" />
+
+<br/>
+
+### 👥 Role-Driven Ecosystem
+
+| Role | Portal / Application | Capabilities |
+| :--- | :--- | :--- |
+| **🩺 Clinicians** | Web EMR Dashboard (`:3000`) | Patient timeline, 3D SAM-Med3D tumor volumetrics, Chronos-2 vital radar, Grad-CAM X-Ray analysis |
+| **👤 Patients** | Web Portal (`:3000/app`) + Native APK | Clinic OTP/SSO login, records history, appointments, live vitals |
+| **🚨 Dispatchers** | CAD Operations Console (`:5174`) | Real-time map tracking, automated unit recommendation, GPS dispatch |
+| **🚑 Crews** | Dedicated Android APK + Web (`:5174/#/driver`) | Employee ID/PIN auth, turn-by-turn routing, pre-hospital vitals transfer |
+
+---
+
+## 🖥️ Workspaces
+
+<table width="100%">
+  <tr>
+    <td width="50%" align="center">
+      <h3>🩺 Clinical Workspace</h3>
+      <p><em>Hospital SSO, Patient EMR & Deep Learning Inference</em></p>
+      <img src="docs/images/clinical-workspace.png" alt="Clinical Workspace" width="100%" style="border-radius: 8px;"/>
+    </td>
+    <td width="50%" align="center">
+      <h3>🚨 Dispatch Workspace</h3>
+      <p><em>Emergency CAD Console, GPS Tracking & Fleet Logistics</em></p>
+      <img src="docs/images/dispatch-workspace.png" alt="Dispatch Workspace" width="100%" style="border-radius: 8px;"/>
+    </td>
+  </tr>
+</table>
+
+---
+
+## 🔄 System Workflows
+
+### 1. Emergency Dispatch & Response Lifecycle
+
+```mermaid
+flowchart LR
+    classDef emergency fill:#fee2e2,stroke:#ef4444,stroke-width:2px,color:#991b1b;
+    classDef dispatch fill:#ffedd5,stroke:#f97316,stroke-width:2px,color:#9a3412;
+    classDef crew fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#92400e;
+    classDef hospital fill:#ecfdf5,stroke:#10b981,stroke-width:2px,color:#065f46;
+    classDef ai fill:#ede9fe,stroke:#8b5cf6,stroke-width:2px,color:#5b21b6;
+
+    A["🚨 Incident Call<br/>Citizen / 911"]:::emergency --> B["🖥️ CAD Dispatch<br/>Triage & Unit Recommendation"]:::dispatch
+    B --> C["🚑 Crew En-Route<br/>Android GPS Telemetry"]:::crew
+    C --> D["🩹 Scene Care<br/>Pre-Hospital Vitals Sync"]:::crew
+    D --> E["🏥 Hospital Intake<br/>Clinician EMR Handover"]:::hospital
+    E --> F["🧠 AI Risk & Imaging<br/>SAM-Med3D & Chronos-2"]:::ai
 ```
 
-Keep application paths unchanged when configuring Render or Railway service roots.
+### 2. Unified Platform Architecture & Data Flow
 
-## MediCluster local setup
+```mermaid
+flowchart TD
+    classDef client fill:#f8fafc,stroke:#64748b,stroke-width:2px,color:#0f172a;
+    classDef api fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0369a1;
+    classDef data fill:#dcfce7,stroke:#16a34a,stroke-width:2px,color:#15803d;
+    classDef ai fill:#f3e8ff,stroke:#9333ea,stroke-width:2px,color:#6b21a8;
 
-Prerequisites: Node.js 20+, Python 3.10+, and the existing Supabase project.
+    subgraph Clients["Applications & Roles"]
+        C1["Clinician Dashboard<br/>React 18"]:::client
+        C2["Patient App & APK<br/>Web + Android"]:::client
+        C3["Dispatcher CAD<br/>Vite + Leaflet"]:::client
+        C4["Crew App & APK<br/>Native Android"]:::client
+    end
 
-1. Copy `medicluster/backend/.env.example` to `medicluster/backend/.env`.
-2. Set `SUPABASE_URL`, backend-only `SUPABASE_SECRET_KEY` (or legacy `SUPABASE_SERVICE_ROLE_KEY`), a random `JWT_SECRET` of at least 32 characters, and `ML_ENGINE_URL=http://localhost:8080`.
-3. Install the additive SQL schema using [Supabase setup](medicluster/backend/supabase/README.md).
-4. Set `ALLOWED_STAFF_EMAILS` to the exact email addresses permitted to register staff accounts (comma-separated). This overrides `ALLOWED_EMAIL_DOMAINS`; leave both unset to disable registration. Alternatively, use `ALLOWED_EMAIL_DOMAINS` for domain-based registration.
-5. Run each service in a separate terminal:
+    subgraph CoreServices["Backend & Realtime"]
+        B1["MediCluster API<br/>Express (:5000)"]:::api
+        B2["Dispatch API<br/>Express (:5001)"]:::api
+        DB[("Supabase Cloud<br/>PostgreSQL + Realtime + Auth")]:::data
+    end
+
+    subgraph IntelligenceEngines["AI & Inference Workers"]
+        M1["Primary ML Engine<br/>Flask (:8080)"]:::ai
+        M2["3D Tumor & Radar<br/>SAM-Med3D / Chronos-2 (:8090)"]:::ai
+        M3["Chest X-Ray Server<br/>TorchXRayVision (:8091)"]:::ai
+        M4["Brain MRI Classifier<br/>BHM TFLite (:8001)"]:::ai
+    end
+
+    C1 & C2 <-->|REST / JWT| B1
+    C3 & C4 <-->|REST| B2
+    C3 <-->|Live GPS Stream| DB
+    B1 & B2 <--> DB
+    B1 --> M1 & M2 & M3 & M4
+```
+
+### 3. Diagnostic AI Pipelines
+
+```mermaid
+flowchart LR
+    classDef input fill:#f1f5f9,stroke:#94a3b8,stroke-width:2px,color:#1e293b;
+    classDef model fill:#e0e7ff,stroke:#6366f1,stroke-width:2px,color:#3730a3;
+    classDef output fill:#d1fae5,stroke:#059669,stroke-width:2px,color:#065f46;
+
+    subgraph DataInput["Input Stream"]
+        D1["3D Volumetric MRI<br/>(.nii / .nii.gz)"]:::input
+        D2["Chest Radiograph<br/>(DICOM / PNG)"]:::input
+        D3["Time-Series Vitals<br/>(CSV / Sensor)"]:::input
+    end
+
+    subgraph NeuralInference["AI Processing"]
+        N1["SAM-Med3D-turbo<br/>Prompted Mask Segmentation"]:::model
+        N2["TorchXRayVision<br/>DenseNet121 + Grad-CAM"]:::model
+        N3["Chronos-2 Foundation<br/>Probabilistic Forecasting"]:::model
+    end
+
+    subgraph ClinicalOutput["Clinical Result"]
+        R1["3D Interactive Mesh<br/>Foreground Voxel Volume"]:::output
+        R2["Pathology Probability<br/>Attention Heatmap"]:::output
+        R3["Quantile Deterioration<br/>p10 / p50 / p90 Risk Bands"]:::output
+    end
+
+    D1 --> N1 --> R1
+    D2 --> N2 --> R2
+    D3 --> N3 --> R3
+```
+
+---
+
+## 📁 Repository Structure
+
+```text
+├── medicluster/
+│   ├── frontend/             # Clinician dashboard & Patient portal (React 18 + Vite)
+│   ├── backend/              # Node/Express API with Supabase Auth & JWT
+│   ├── ml-engine/            # Tabular risk models, NLP, TorchXRayVision CXR
+│   ├── intelligence-engine/  # SAM-Med3D-turbo & Chronos-2 Deterioration Radar
+│   ├── patient-android/      # Native patient Android application
+│   └── crew-android/         # Native crew Android application
+└── ambulance-dispatch/
+    ├── frontend/
+    │   └── dispatcher-dashboard/ # Dispatcher CAD console & Crew web workspace
+    └── backend/
+        └── api/              # Dispatch REST API & Supabase assignment services
+```
+
+---
+
+## 🚀 Quickstart
+
+### Service Registry & Ports
+
+| Component | Directory | Port | Command |
+| :--- | :--- | :--- | :--- |
+| **ML Engine** | `medicluster/ml-engine` | `:8080` | `source venv/bin/activate && python app.py` |
+| **Backend API** | `medicluster/backend` | `:5000` | `npm run dev` |
+| **Web Frontend** | `medicluster/frontend` | `:3000` | `npm run dev` |
+| **Dispatch CAD** | `ambulance-dispatch/frontend/dispatcher-dashboard` | `:5174` | `npm run dev` |
+| **Dispatch API** | `ambulance-dispatch/backend/api` | `:5001` | `npm start` |
+
+### 1. Backend & ML Setup
 
 ```bash
-# ML engine
+# 1. ML Engine
 cd medicluster/ml-engine
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 python app.py
 ```
 
 ```bash
-# Backend
+# 2. Node Backend
 cd medicluster/backend
+cp .env.example .env   # Configure SUPABASE_URL, SUPABASE_SECRET_KEY, JWT_SECRET
 npm ci
 npm run dev
 ```
 
 ```bash
-# Frontend
+# 3. Frontend App
 cd medicluster/frontend
 npm ci
 npm run dev
 ```
 
-Open `http://localhost:3000/login` for staff or `http://localhost:3000/app` for patients.
-Patient sign-in supports clinic-linked email codes, Google accounts, and mobile
-numbers. See [EmailJS and Google setup](medicluster/backend/PATIENT_AUTH.md), including
-the [branded OTP email template](medicluster/backend/email-templates/patient-otp.html).
-For SMS through an Android phone and SIM, see [SMS Sender setup](medicluster/sms-sender-android/README.md).
-`OTP_DEV_LOG=true` enables server-log codes for local development when Android mode is disabled.
+> [!TIP]
+> Access points: Clinicians at `http://localhost:3000/login`, Patients at `http://localhost:3000/app`.
 
-### Local brain MRI analysis
+---
 
-Imaging supports a separate **Brain MRI** scan type through the existing
-Brain Health Monitor service. Its TensorFlow Lite runtime preserves the model's
-class ordering and preprocessing without requiring TensorFlow in the MediCluster
-ML environment. Chest X-ray models continue using `ML_ENGINE_URL`.
-
-Start the existing workstation in its own terminal:
+### 2. Ambulance Dispatch Setup
 
 ```bash
-cd /home/vinay/Documents/brain_health_monitor
-BHM_HOST=127.0.0.1 BHM_PORT=8001 BHM_MAX_UPLOAD_BYTES=52428800 .venv/bin/python server.py
-```
-
-Set `BRAIN_MRI_URL=http://127.0.0.1:8001` in `medicluster/backend/.env` and
-restart the backend. Check `http://127.0.0.1:8001/api/ready` for readiness.
-Then open `/imaging`, select **Brain MRI**, enter a patient ID, upload a single
-MRI slice, and select **Run analysis**. JPEG, PNG, WebP, BMP, TIFF and single-frame
-grayscale MR DICOM are supported. Results include all four class scores (glioma,
-meningioma, no tumor and pituitary tumor), and a Grad-CAM overlay when available.
-The optional `BHM_MODEL_DIR` setting selects another compatible artifact directory;
-the workstation uses its existing `model/` directory by default.
-
-This is a research classifier, not a confirmed diagnosis. Grad-CAM represents
-model attention, not lesion segmentation. Its sample images are in the
-workstation's `static/samples/` directory. Model weights remain in that project.
-
-## Dispatch setup
-
-The dispatcher dashboard uses Supabase Auth, database tables, Realtime, and the
-`driver-login` Edge Function. Configure these public frontend variables before building:
-
-```env
-VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-VITE_SUPABASE_ANON_KEY=YOUR_PUBLIC_ANON_KEY
-VITE_MEDICLUSTER_URL=http://localhost:3000
-```
-
-```bash
+# 1. Dispatch CAD Console
 cd ambulance-dispatch/frontend/dispatcher-dashboard
 npm ci
 npm run dev
 ```
 
-The **Crew app** card at `/download#crew` offers a signed Android 8.0+ APK,
-with the web workspace as a secondary option. It opens the deployed employee-ID/PIN
-workflow in a dedicated Android app. See [Crew Android setup](medicluster/crew-android/README.md)
-for signing and build instructions. Internet is required; GPS works while using
-the app. Installing it does not provision a Supabase account.
+```bash
+# 2. Dispatch REST API
+cd ambulance-dispatch/backend/api
+npm ci
+npm start
+```
 
-Open `http://localhost:5174/#/login` for dispatchers or
-`http://localhost:5174/#/driver/login` for crews. Crew sign-in uses an employee ID
-and PIN. The driver credentials migration records table setup but omits the SQL
-function bodies; restore `driver_pin_check` and `set_driver_pin` from the existing
-Supabase project when provisioning a new database.
+> [!NOTE]
+> Access points: Dispatchers at `http://localhost:5174/#/login`, Ambulance Crews at `http://localhost:5174/#/driver/login`.
 
-Dispatch actions use the Supabase-backed REST API in `ambulance-dispatch/backend/api`.
-Deploy that Node service and set dashboard build variable `VITE_API_URL` to its
-HTTPS URL ending in `/api`. The API accepts existing Supabase sessions and reads
-the same CAD tables as the dashboard. Apply the new assignment/readiness SQL
-migration before checking backend health. Supabase Realtime handles shared fleet
-and incident updates; leave `VITE_WEBSOCKET_URL` unset for this deployment.
-The old MongoDB and Redis-backed Socket.IO entry points are not used by this setup.
-See [full dispatch Render setup](ambulance-dispatch/DEPLOY_RENDER.md).
+---
 
-## Deployment
+## 🔬 Deep Learning Workstations
 
-| Service | Repository root | Deployment |
-| --- | --- | --- |
-| MediCluster web + API | `medicluster` | Existing Dockerfile builds React and serves it from Express |
-| MediCluster ML | `medicluster/ml-engine` | Existing Dockerfile runs Gunicorn |
-| Dispatch dashboard + crew app | `ambulance-dispatch/frontend/dispatcher-dashboard` | Existing Dockerfile, or static build with `npm ci && npm run build`, publish `dist` |
-| Dispatch API | `ambulance-dispatch/backend/api` | Node service: `npm ci`, then `npm start`; health `/health` |
+<details>
+<summary><b>🧠 3D Tumor Explorer (SAM-Med3D) & Deterioration Radar (Chronos-2)</b></summary>
 
-Set backend secrets in the hosting provider, including `SUPABASE_URL`,
-`SUPABASE_SECRET_KEY` (or `SUPABASE_SERVICE_ROLE_KEY`), `JWT_SECRET`,
-and optional Ollama provider credentials. Point `ML_ENGINE_URL` to the deployed ML
-service. Docker containers use the hosting provider's `PORT` variable.
+<br/>
 
-Frontend environment variables are embedded at build time. Production links default
-to `https://medicluster-dispatch-dix1.onrender.com`; local development uses port 5174.
-Set `VITE_DISPATCH_URL` to override the dispatch website URL, then rebuild; the
-MediCluster Dockerfile passes this public setting to Vite. The dispatch Dockerfile still needs a
-`VITE_MEDICLUSTER_URL` build argument for its return links.
+Requires local intelligence worker running on `127.0.0.1:8090`:
 
-### Separate Render frontend and backend
+```bash
+cd medicluster/intelligence-engine
+.venv/bin/python app.py
+```
 
-For the MediCluster backend Node web service, use root `medicluster/backend`,
-build command `npm ci`, and start command `npm start`. Keep its Supabase,
-JWT, delivery-provider settings, and deployed `ML_ENGINE_URL` configured.
+- Configure matching `INTELLIGENCE_TOKEN` in `medicluster/backend/.env` and `medicluster/intelligence-engine/.env`.
+- Set `INTELLIGENCE_URL=http://127.0.0.1:8090` in `medicluster/backend/.env`.
+- **3D Tumor**: Interactive axial lesion prompt placement $\rightarrow$ 3D mesh reconstruction $\rightarrow$ Foreground voxel volume analysis.
+- **Radar**: Multi-signal vital telemetry replay $\rightarrow$ Chronos-2 probabilistic forecast (10th, 50th, 90th percentiles).
+</details>
 
-For the separate frontend Node web service, use root `medicluster/frontend`,
-build command `npm ci && npm run build`, and start command `npm start`.
-Set runtime `BACKEND_URL=https://medicluster-backend.onrender.com` to the actual
-backend origin. The frontend production server serves `dist` and forwards `/api`
-requests to that backend, including Google callback cookies and APK downloads.
-Do not use `serve -s dist` for this setup: it does not forward API requests.
+<details>
+<summary><b>🩻 Chest X-Ray Worker (TorchXRayVision)</b></summary>
 
-On the backend, set `PATIENT_PUBLIC_ORIGIN` and `CORS_ORIGINS` to the frontend
-HTTPS origin. Google OAuth's authorized redirect URI is
-`<frontend-origin>/api/patient-auth/google/callback`. Check `/api/health` through
-the frontend URL to verify both services and the database together.
+<br/>
 
-The public homepage and `/download` offer role-specific web entry points and the
-signed patient Android installer. Signed-in clinicians retain their existing home
-dashboard. Dispatch and crew entries open their separate login routes on the deployed
-dispatch website. Invalid URL overrides leave those entries unavailable.
+Dedicated Python 3.12 imaging service on `127.0.0.1:8091`:
 
-Health endpoints: MediCluster `/api/health` verifies Supabase storage and returns 503 until its backend key and SQL schema work; ML `/health`, and ML connectivity
-through the web service at `/api/health/ml`.
-
-Do not commit `.env` files, private keys, database credentials, generated builds,
-or dependency directories. Public frontend configuration must never contain a
-Supabase service-role key.
-
-Application-specific READMEs, deployment files, sample data, migrations, and tests
-remain alongside their respective services.
-
-### Local 3D Tumor Explorer and Deterioration Radar
-
-Clinician navigation → **Analyze → 3D Tumor Explorer** or **Deterioration Radar**.
-Both require clinician sign-in and the local intelligence worker at `127.0.0.1:8090`.
-Set matching `INTELLIGENCE_TOKEN` secrets in backend and worker `.env` files; set
-backend `INTELLIGENCE_URL=http://127.0.0.1:8090`. Never put this secret in Vite variables.
-
-Run from `medicluster/intelligence-engine`: `.venv/bin/python app.py`.
-Model checkpoints and patient artifacts remain in ignored `.models/` and `.runtime/`
-directories. Protect and back up the latter when retaining real research data.
-
-**Brain:** upload a single-channel 3D `.nii`/`.nii.gz` MRI with declared spatial units,
-or load a clearly labelled local UCSF-PDGM demonstration case. Add positive/negative
-lesion points on the axial slice, then run SAM-Med3D-turbo. Rotate/zoom the 3D surface,
-inspect orthogonal overlays, adjust brain opacity, and download the predicted NIfTI
-mask. Volume uses foreground voxel count and physical affine determinant. Compare
-segmented studies with the same patient identifier and distinct scan dates; comparison
-reports volume change only, without spatial registration. Demo seed points come from
-provider annotations and are disclosed; reference masks never become model predictions.
-The existing four-class Brain Health Monitor classifier remains a separate slice action.
-Prompted segmentation does not establish tumor type or universal tumor coverage.
-
-**Radar:** create a simulated scenario or an empty manual session. Add complete vital
-measurements manually or through CSV, replay any prefix, then forecast with local
-pretrained Chronos-2. Charts show six signals and 10th/50th/90th quantiles. Adult
-reference-score contributors stay separate from forecasts; neither constitutes a
-validated deterioration probability. Irregular timing produces next-reading forecasts,
-without unsupported minute-based horizons. Exports include source and assumptions.
-No generated fallback is shown as a model result when inference is unavailable.
-
-Checkpoint provenance, licenses and SHA-256 values are recorded locally in
-`.models/provenance.json`. Upstream projects:
-[SAM-Med3D](https://github.com/uni-medical/SAM-Med3D) and
-[Chronos-2](https://huggingface.co/amazon/chronos-2), both Apache-2.0.
-
-### Chest X-ray worker
-
-Chest imaging runs independently of the Python 3.14 tabular/NLP server. Create its
-Python 3.12 environment once:
-
-```sh
-uv venv --python 3.12 medicluster/ml-engine/.venv-imaging
-uv pip install --python medicluster/ml-engine/.venv-imaging/bin/python -r medicluster/ml-engine/requirements-imaging.txt
+```bash
 cd medicluster/ml-engine
+uv venv --python 3.12 .venv-imaging
+uv pip install --python .venv-imaging/bin/python -r requirements-imaging.txt
 .venv-imaging/bin/python download_imaging_models.py
 .venv-imaging/bin/python imaging_server.py
 ```
 
-Set backend `CHEST_IMAGING_URL=http://127.0.0.1:8091` and restart the Node backend.
-The worker serves model discovery, inference and Grad-CAM. Other ML/NLP endpoints
-continue using `ML_ENGINE_URL`. If `CHEST_IMAGING_URL` is unset, imaging retains its
-previous ML-engine routing for existing deployments.
+Set `CHEST_IMAGING_URL=http://127.0.0.1:8091` in `medicluster/backend/.env`. Provides DenseNet-121 multi-pathology scoring and Grad-CAM attention overlays.
+</details>
 
-Five official TorchXRayVision checkpoints download to
-`~/.torchxrayvision/models_data/`; the downloader validates release sizes, writes
-files atomically, and records SHA-256/source provenance there. The default is
-`densenet121-res224-all`. Model scores retain the library's native sigmoid and
-operating-point normalization; the app does not apply another sigmoid.
+<details>
+<summary><b>🔬 Brain MRI Health Monitor</b></summary>
 
-Use **Imaging → Chest X-ray → Upload images → Run analysis**, then **Show Grad-CAM
-region** to inspect the selected finding. Brain MRI continues using the separate
-Brain Health Monitor adapter.
+<br/>
+
+Run the TFLite 4-class classifier (Glioma, Meningioma, Pituitary, Normal):
+
+```bash
+cd /home/vinay/Documents/brain_health_monitor
+BHM_HOST=127.0.0.1 BHM_PORT=8001 .venv/bin/python server.py
+```
+
+Set `BRAIN_MRI_URL=http://127.0.0.1:8001` in `medicluster/backend/.env`.
+</details>
+
+---
+
+## 🚢 Deployment
+
+| Target | Service Root | Type | Build / Run |
+| :--- | :--- | :--- | :--- |
+| **Web + Backend** | `medicluster` | Docker / Node | Multi-stage Dockerfile or separate Render Web Services |
+| **ML Engine** | `medicluster/ml-engine` | Docker / Python | Gunicorn container exposing `:8080` |
+| **Dispatch CAD** | `ambulance-dispatch/frontend/dispatcher-dashboard` | Static / Web | `npm ci && npm run build` $\rightarrow$ publish `dist` |
+| **Dispatch API** | `ambulance-dispatch/backend/api` | Node Web Service | `npm ci && npm start` |
+
+---
+
+<div align="center">
+  <sub>MediCluster &middot; Designed for Connected Healthcare & Emergency Response</sub>
+</div>
