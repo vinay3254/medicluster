@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ScatterChart, Scatter, XAxis, YAxis, ZAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
@@ -16,6 +16,8 @@ const METRIC_LABELS = {
 };
 
 export default function ComparisonPanel({ allResults }) {
+  const [view, setView] = useState("metrics");
+  const [metric, setMetric] = useState("silhouette");
   const isEmpty = !allResults || Object.keys(allResults).length === 0;
 
   // Find best algorithm per metric
@@ -47,17 +49,19 @@ export default function ComparisonPanel({ allResults }) {
   }
 
   return (
-    <div className="space-y-4 fade-in">
+    <div className="mc-comparison fade-in">
+      <label className="mc-comparison-select">Comparison view<select value={view} onChange={event => setView(event.target.value)}><option value="metrics">Quality metrics</option>{ALGOS.map(algo => <option key={algo} value={algo}>{ALGO_LABELS[algo]}</option>)}</select></label>
       {/* Metrics comparison table */}
-      <div className="panel">
+      <div className="panel mc-comparison-metrics" hidden={view !== "metrics"}>
         <p className="section-label mb-3">Algorithm Comparison — Quality Metrics</p>
-        <div className="overflow-x-auto">
+        <label className="mc-comparison-metric">Metric<select value={metric} onChange={event => setMetric(event.target.value)}>{METRIC_KEYS.map(key => <option key={key} value={key}>{METRIC_LABELS[key]}</option>)}</select></label>
+        <div className="mc-comparison-table" data-metric={metric}>
           <table className="w-full text-xs text-left">
             <thead>
               <tr className="text-slate-500 uppercase tracking-wide border-b border-navy-700">
                 <th className="py-2 pr-4">Algorithm</th>
                 {METRIC_KEYS.map((mk) => (
-                  <th key={mk} className="py-2 px-3">{METRIC_LABELS[mk]}</th>
+                  <th data-metric={mk} key={mk} className="py-2 px-3">{METRIC_LABELS[mk]}</th>
                 ))}
               </tr>
             </thead>
@@ -72,7 +76,7 @@ export default function ComparisonPanel({ allResults }) {
                       const v = res?.metrics?.[mk];
                       const isBest = bestAlgos[mk] === algo;
                       return (
-                        <td key={mk} className={`py-2 px-3 font-mono ${isBest ? "text-blue-700 font-semibold" : "text-slate-500"}`}>
+                        <td data-metric={mk} key={mk} className={`py-2 px-3 font-mono ${isBest ? "text-blue-700 font-semibold" : "text-slate-500"}`}>
                           {hasErr ? <span className="text-blue-800 text-xs">{res?.error ?? "Error"}</span>
                             : v !== null && v !== undefined ? (
                               <>
@@ -92,7 +96,7 @@ export default function ComparisonPanel({ allResults }) {
       </div>
 
       {/* 2×2 mini scatter plots */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="mc-comparison-plots" hidden={view === "metrics"}>
         {ALGOS.map((algo) => {
           const res = allResults[algo];
           const pts = res?.patients ?? [];
@@ -104,12 +108,12 @@ export default function ComparisonPanel({ allResults }) {
           }
 
           return (
-            <div key={algo} className="panel">
+            <div key={algo} className="panel mc-comparison-plot" hidden={view !== algo}>
               <p className="text-xs font-semibold text-slate-800 mb-2">{ALGO_LABELS[algo]}</p>
               {res?.error ? (
                 <div className="text-blue-800 text-xs p-4">{res.error}</div>
               ) : (
-                <ResponsiveContainer width="100%" height={180}>
+                <ResponsiveContainer width="100%" height="100%" minHeight={0}>
                   <ScatterChart margin={{ top: 5, right: 5, left: -25, bottom: 0 }}>
                     <CartesianGrid stroke="#d7dacf" strokeDasharray="2 2" />
                     <XAxis dataKey="x" type="number" tick={{ fontSize: 9, fill: "#45484d" }} />
@@ -131,6 +135,7 @@ export default function ComparisonPanel({ allResults }) {
                         data={data}
                         fill={RISK_COLORS[tier] ?? "#888"}
                         fillOpacity={0.75}
+                        isAnimationActive={false}
                       />
                     ))}
                   </ScatterChart>

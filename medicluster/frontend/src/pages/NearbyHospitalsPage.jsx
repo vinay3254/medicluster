@@ -1,373 +1,200 @@
-import { useState, useCallback, useRef } from 'react';
-import { GoogleMap, useJsApiLoader, Marker, InfoWindow } from '@react-google-maps/api';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { MapPin, Navigation, Search, Hospital, ArrowUpRight } from 'lucide-react';
 import { fetchNearbyHospitals } from '../api/nearbyHospitals';
-import { Page } from "../components/ui";
+import { Page } from '../components/ui';
+import './NearbyHospitalsPage.css';
 
-const LIBRARIES = [];
-const MAP_CENTER_DEFAULT = { lat: 20.5937, lng: 78.9629 };
-const MAP_OPTIONS = {
-  disableDefaultUI: true,
-  zoomControl: true,
-  mapTypeControl: false,
-  streetViewControl: false,
-  fullscreenControl: false,
-  clickableIcons: false,
-};
+// Runtime override supports switching to a hosted/self-managed Nominatim-compatible service.
+const geocodeCache = new Map();
+let lastGeocodeAt = 0;
 
-function hospitalIcon(isHospital) {
-  const color = isHospital ? '#c23a34' : '#ad633f';
-  const svg = encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-      <rect x="1" y="1" width="30" height="30" rx="8" fill="${color}" stroke="white" stroke-width="2"/>
-      <line x1="8" y1="16" x2="24" y2="16" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
-      <line x1="16" y1="8" x2="16" y2="24" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
-    </svg>`
-  );
-  return {
-    url: `data:image/svg+xml;charset=UTF-8,${svg}`,
-    scaledSize: new window.google.maps.Size(32, 32),
-    anchor: new window.google.maps.Point(16, 16),
-  };
+async function geocodeLocation(query) {
+  const key = query.toLowerCase();
+  if (geocodeCache.has(key)) return geocodeCache.get(key);
+  const scheduledAt = Math.max(Date.now(), lastGeocodeAt + 1100);
+  lastGeocodeAt = scheduledAt;
+  await new Promise(resolve => setTimeout(resolve, Math.max(0, scheduledAt - Date.now())));
+  const endpoint = window.MEDICLUSTER_GEOCODING_URL || 'https://nominatim.openstreetmap.org/search';
+  const url = new URL(endpoint, window.location.origin);
+  url.searchParams.set('format', 'jsonv2');
+  url.searchParams.set('limit', '1');
+  url.searchParams.set('q', query);
+  const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  if (!response.ok) throw new Error('geocoding');
+  const results = await response.json();
+  if (geocodeCache.size >= 50) geocodeCache.delete(geocodeCache.keys().next().value);
+  geocodeCache.set(key, results);
+  return results;
 }
 
-function userLocationIcon() {
-  return {
-    path: window.google.maps.SymbolPath.CIRCLE,
-    scale: 10,
-    fillColor: '#ad633f',
-    fillOpacity: 1,
-    strokeColor: '#ffffff',
-    strokeWeight: 3,
-  };
-}
+const DEFAULT_CENTER = [20.5937, 78.9629];
+const directionsUrl = h => `https://www.google.com/maps/dir/?api=1&destination=${h.lat},${h.lng}`;
+const markerIcon = (selected = false, origin = false) => L.divIcon({
+  className: `mc-hospital-pin${selected ? ' is-selected' : ''}${origin ? ' is-origin' : ''}`,
+  html: origin ? '<span></span>' : '<span aria-hidden="true">+</span>', iconSize: [30, 30], iconAnchor: [15, 15],
+});
 
 export default function NearbyHospitalsPage() {
-  const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
-    libraries: LIBRARIES,
-  });
-
+  const mapNode = useRef(null);
   const mapRef = useRef(null);
-  const [query, setQuery]               = useState('');
-  const [center, setCenter]             = useState(null);
-  const [radius, setRadius]             = useState(5);
-  const [hospitals, setHospitals]       = useState([]);
-  const [loading, setLoading]           = useState(false);
-  const [geoLoading, setGeoLoading]     = useState(false);
-  const [error, setError]               = useState(null);
-  const [selectedIdx, setSelectedIdx]   = useState(null);
-  const [locationLabel, setLocationLabel] = useState('');
+  const layers = useRef(null);
+  const applyRef = useRef(null);
+  const requestId = useRef(0);
+  const listRef = useRef(null);
+  const [query, setQuery] = useState('');
+  const [center, setCenter] = useState(null);
+  const [radius, setRadius] = useState(5);
+  const [hospitals, setHospitals] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [selectedId, setSelectedId] = useState(null);
+  const [locationLabel, setLocationLabel] = useState('Choose your starting point');
+  const [view, setView] = useState('Search');
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(2);
 
-  const onMapLoad = useCallback((map) => { mapRef.current = map; }, []);
-
-  const reverseGeocode = useCallback((c) => {
-    const geocoder = new window.google.maps.Geocoder();
-    geocoder.geocode({ location: c }, (results, status) => {
-      if (status === 'OK' && results[0]) {
-        setLocationLabel(results[0].formatted_address.split(',').slice(0, 3).join(', '));
-      } else {
-        setLocationLabel(`${c.lat.toFixed(4)}, ${c.lng.toFixed(4)}`);
-      }
-    });
-  }, []);
-
-  const fetchHospitals = useCallback(async (c, radiusKm) => {
-    setLoading(true);
-    setError(null);
-    setSelectedIdx(null);
-    try {
-      const mapped = await fetchNearbyHospitals(c, radiusKm);
-      if (!mapped.length) {
-        setHospitals([]);
-        setError(`No hospitals found within ${radiusKm}km. Try increasing the radius.`);
-        return;
-      }
-      setHospitals(mapped);
-      if (mapRef.current && mapped.length > 0) {
-        const bounds = new window.google.maps.LatLngBounds();
-        bounds.extend(c);
-        mapped.forEach(h => bounds.extend({ lat: h.lat, lng: h.lng }));
-        mapRef.current.fitBounds(bounds, 60);
-      }
-    } catch {
-      setError('Could not fetch hospital data. Check your internet connection.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const applyCenter = useCallback((c, label) => {
+  const fetchHospitals = useCallback(async (c, radiusKm, label) => {
+    const id = ++requestId.current;
     setCenter(c);
-    setSelectedIdx(null);
-    if (label) setLocationLabel(label);
-    else reverseGeocode(c);
-    fetchHospitals(c, radius);
-    mapRef.current?.panTo(c);
-  }, [radius, reverseGeocode, fetchHospitals]);
-
-  const handleSearch = useCallback(() => {
-    if (!query.trim() || !isLoaded) return;
+    setLocationLabel(label || `${c.lat.toFixed(4)}, ${c.lng.toFixed(4)}`);
     setLoading(true);
-    setError(null);
-    const geocoder = new window.google.maps.Geocoder();
-    geocoder.geocode({ address: query }, (results, status) => {
-      if (status === 'OK' && results[0]) {
-        const loc = results[0].geometry.location;
-        const c = { lat: loc.lat(), lng: loc.lng() };
-        const label = results[0].formatted_address.split(',').slice(0, 3).join(', ');
-        applyCenter(c, label);
-      } else {
-        setError('Location not found. Try a more specific address or city name.');
-        setLoading(false);
-      }
-    });
-  }, [query, isLoaded, applyCenter]);
-
-  const handleRadiusChange = useCallback((r) => {
-    setRadius(r);
-    if (center) fetchHospitals(center, r);
-  }, [center, fetchHospitals]);
-
-  const useMyLocation = useCallback(() => {
-    if (!navigator.geolocation) { setError('Geolocation is not supported by your browser.'); return; }
-    setGeoLoading(true);
-    setError(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        applyCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setGeoLoading(false);
-      },
-      () => {
-        setError('Could not get your location. Please allow location access or search manually.');
-        setGeoLoading(false);
-      }
-    );
-  }, [applyCenter]);
-
-  const selectHospital = useCallback((h, idx) => {
-    setSelectedIdx(idx);
-    if (mapRef.current) {
-      mapRef.current.panTo({ lat: h.lat, lng: h.lng });
-      mapRef.current.setZoom(16);
+    setError('');
+    setHospitals([]);
+    setSelectedId(null);
+    setPage(0);
+    mapRef.current?.setView([c.lat, c.lng], 13);
+    try {
+      const results = await fetchNearbyHospitals(c, radiusKm);
+      if (id !== requestId.current) return;
+      setHospitals(results);
+      if (results.length) mapRef.current?.fitBounds(L.latLngBounds([[c.lat, c.lng], ...results.map(h => [h.lat, h.lng])]), { padding: [35, 35], maxZoom: 15 });
+      setView('Results');
+    } catch {
+      if (id === requestId.current) setError('Hospital search is unavailable. Please try again.');
+    } finally {
+      if (id === requestId.current) setLoading(false);
     }
   }, []);
+  applyRef.current = c => fetchHospitals(c, radius);
 
+  useEffect(() => {
+    const map = L.map(mapNode.current, { zoomControl: false }).setView(DEFAULT_CENTER, 5);
+    mapRef.current = map;
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    L.tileLayer(window.MEDICLUSTER_MAP_TILE_URL || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors', maxZoom: 19,
+    }).addTo(map);
+    layers.current = L.layerGroup().addTo(map);
+    map.on('click', e => applyRef.current({ lat: e.latlng.lat, lng: e.latlng.lng }));
+    const observer = new ResizeObserver(() => {
+      map.invalidateSize();
+      layers.current?.eachLayer(layer => {
+        if (layer.isPopupOpen?.()) layer.getPopup().update();
+      });
+    });
+    observer.observe(mapNode.current);
+    return () => { observer.disconnect(); map.remove(); mapRef.current = null; requestId.current++; };
+  }, []);
+
+  const selectHospital = useCallback(h => {
+    setSelectedId(h.place_id);
+    mapRef.current?.setView([h.lat, h.lng], 16);
+  }, []);
+
+  useEffect(() => {
+    if (!layers.current) return;
+    layers.current.clearLayers();
+    if (center) L.marker([center.lat, center.lng], { icon: markerIcon(false, true), title: 'Search location' }).addTo(layers.current).bindTooltip('Search location');
+    hospitals.forEach(h => {
+      const popup = document.createElement('div');
+      const title = document.createElement('strong');
+      title.textContent = h.name;
+      const address = document.createElement('p');
+      address.textContent = h.address || `${h.distKm.toFixed(1)} km from search location`;
+      const link = document.createElement('a');
+      link.textContent = 'Get directions ↗'; link.href = directionsUrl(h); link.target = '_blank'; link.rel = 'noopener noreferrer';
+      popup.append(title, address, link);
+      const marker = L.marker([h.lat, h.lng], { icon: markerIcon(selectedId === h.place_id), title: h.name, alt: h.name }).addTo(layers.current).bindPopup(popup);
+      marker.on('click', () => {
+        setSelectedId(h.place_id);
+        setPage(Math.floor(hospitals.indexOf(h) / pageSize));
+      });
+      if (selectedId === h.place_id) marker.openPopup();
+    });
+  }, [center, hospitals, selectedId, pageSize]);
+
+  useEffect(() => {
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.height > 0) setPageSize(Math.max(1, Math.floor(entry.contentRect.height / 112)));
+    });
+    observer.observe(listRef.current);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => setPage(0), [pageSize]);
+
+  async function search(event) {
+    event.preventDefault();
+    if (!query.trim() || loading) return;
+    const id = ++requestId.current;
+    setLoading(true); setError('');
+    try {
+      const results = await geocodeLocation(query.trim());
+      if (id !== requestId.current) return;
+      if (!results.length) { setError('Location not found. Try a city or a more specific address.'); setLoading(false); return; }
+      const found = results[0];
+      await fetchHospitals({ lat: Number(found.lat), lng: Number(found.lon) }, radius, found.display_name.split(',').slice(0, 3).join(','));
+    } catch {
+      if (id === requestId.current) { setError('Location search is unavailable. Try your current location or click the map.'); setLoading(false); }
+    }
+  }
+
+  function useMyLocation() {
+    if (!navigator.geolocation) { setError('Your browser does not support location access. Search for an address instead.'); return; }
+    setGeoLoading(true); setError('');
+    navigator.geolocation.getCurrentPosition(position => {
+      setGeoLoading(false);
+      fetchHospitals({ lat: position.coords.latitude, lng: position.coords.longitude }, radius, 'Your current location');
+    }, () => { setGeoLoading(false); setError('Location access was unavailable. Search for a city or address instead.'); }, { timeout: 15000 });
+  }
+
+  const pages = Math.max(1, Math.ceil(hospitals.length / pageSize));
+  const currentPage = Math.min(page, pages - 1);
+  const visible = hospitals.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
   return (
-    <Page
-      title="Nearby hospitals"
-      sub="Search any location or click the map to find hospitals nearby."
-      actions={locationLabel && (
-        <span className="font-mono text-xs text-slate-600 max-w-xs truncate" title={locationLabel}>{locationLabel}</span>
-      )}
-    >
-      <div className="flex flex-col lg:flex-row gap-8" style={{ minHeight: 0 }}>
-        {/* ── Left panel ── */}
-        <div className="lg:w-80 flex-shrink-0 flex flex-col gap-4">
-
-          <div className="border-t border-ink p-4 space-y-3">
-            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Find Hospitals Near</p>
-
-            <div className="flex gap-2">
-              <input
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSearch()}
-                placeholder="City, area, or address…"
-                className="flex-1 text-sm border border-line rounded-[3px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-ink/10 text-slate-700 placeholder:text-slate-400"
-              />
-              <button
-                onClick={handleSearch}
-                disabled={loading || !query.trim() || !isLoaded}
-                className="px-3 py-2 bg-ink text-paper rounded-[3px] hover:bg-slate-700 disabled:opacity-50 transition-colors text-sm"
-              >
-                Search
-              </button>
-            </div>
-
-            <button
-              onClick={useMyLocation}
-              disabled={geoLoading || loading || !isLoaded}
-              className="w-full flex items-center justify-center gap-2 py-2.5 border-2 border-line-strong text-blue-700 rounded-[3px] hover:bg-sunken transition-colors text-sm font-semibold disabled:opacity-50"
-            >
-              {geoLoading
-                ? <><div className="w-3.5 h-3.5 border-2 border-line-strong border-t-blue-600 rounded-full animate-spin" />Getting location…</>
-                : <><span></span>Use My Location</>}
-            </button>
-
-            <div>
-              <p className="text-xs text-slate-500 font-semibold mb-1.5">Search Radius</p>
-              <div className="flex gap-1.5">
-                {[2, 5, 10, 20].map(r => (
-                  <button key={r} onClick={() => handleRadiusChange(r)}
-                    className={`flex-1 py-1.5 rounded-[3px] text-xs font-semibold border transition-colors ${ radius === r ? 'bg-ink text-paper border-ink' : 'border-line text-slate-600 hover:border-line-strong' }`}>
-                    {r}km
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-400 text-center">
-              Or <span className="text-blue-600 font-medium">click anywhere on the map</span> to set location
-            </p>
+    <Page title="Nearby hospitals" sub="Find care close to you, wherever you are." className="mc-hospitals-page">
+      <nav className="mc-hospital-views" aria-label="Hospital finder views">
+        {['Search', 'Map', 'Results'].map(name => <button key={name} type="button" aria-pressed={view === name} onClick={() => setView(name)}>{name}{name === 'Results' && hospitals.length > 0 ? ` (${hospitals.length})` : ''}</button>)}
+      </nav>
+      {error && <p role="alert" className="mc-hospital-error">{error}</p>}
+      <div className="mc-hospital-workspace" data-view={view}>
+        <section className="mc-hospital-search" aria-labelledby="hospital-search-title">
+          <div className="mc-hospital-search-heading"><span className="mc-hospital-icon"><MapPin size={20} /></span><div><h2 id="hospital-search-title">Where do you need care?</h2><p>Search an address or choose a point on the map.</p></div></div>
+          <form onSubmit={search} className="mc-hospital-search-form">
+            <label className="sr-only" htmlFor="hospital-location">City, area, or address</label>
+            <div className="mc-hospital-query"><Search size={17} aria-hidden="true" /><input id="hospital-location" value={query} onChange={e => setQuery(e.target.value)} placeholder="City, area, or address…" autoComplete="off" /><button type="submit" disabled={loading || !query.trim()}>{loading ? 'Searching…' : 'Search'}</button></div>
+            <button className="mc-hospital-gps" type="button" onClick={useMyLocation} disabled={geoLoading || loading}><Navigation size={15} aria-hidden="true" />{geoLoading ? 'Locating…' : 'Use my location'}</button>
+          </form>
+          <p className="mc-hospital-search-credit">Location search by <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a></p>
+          <fieldset className="mc-hospital-radius"><legend>Search radius</legend>{[2, 5, 10, 20].map(r => <button type="button" key={r} aria-pressed={radius === r} disabled={loading || geoLoading} onClick={() => { setRadius(r); if (center) fetchHospitals(center, r, locationLabel); }}>{r} km</button>)}</fieldset>
+        </section>
+        <section className="mc-hospital-map-card" aria-label="Hospital map">
+          <div className="mc-hospital-map-caption"><MapPin size={16} aria-hidden="true" /><span title={locationLabel}>{locationLabel}</span><span className="mc-hospital-map-live">Map</span></div>
+          <div ref={mapNode} className="mc-hospital-map" aria-label="Interactive map. Click to search hospitals at a location." />
+        </section>
+        <section className="mc-hospital-results" aria-labelledby="hospital-results-title" aria-busy={loading}>
+          <div className="mc-hospital-results-heading"><div><span className="mc-hospital-eyebrow">CARE NEAR YOU</span><h2 id="hospital-results-title">{hospitals.length ? `${hospitals.length} places nearby` : 'Your nearby care'}</h2></div><Hospital size={23} aria-hidden="true" /></div>
+          <div className="mc-hospital-list" ref={listRef}>
+            {loading ? <div className="mc-hospital-empty" role="status"><span className="mc-hospital-icon"><Search size={24} /></span><h3>Finding nearby care…</h3><p>Searching OpenStreetMap hospitals and clinics.</p></div> : hospitals.length ? <ul aria-label="Nearby hospitals">{visible.map(h => <li key={h.place_id} className={selectedId === h.place_id ? 'is-selected' : ''}>
+              <button className="mc-hospital-select" type="button" aria-pressed={selectedId === h.place_id} onClick={() => selectHospital(h)}><span className="mc-hospital-name" title={h.name}>{h.name}</span><span className="mc-hospital-meta">{h.isHospital ? 'Hospital' : 'Clinic'} · {h.distKm.toFixed(1)} km {h.emergency ? '· Emergency' : ''}</span></button>
+              <div className="mc-hospital-details"><span title={h.address}>{h.address || 'Address not listed'}{h.phone ? ` · ${h.phone}` : ''}</span><a href={directionsUrl(h)} target="_blank" rel="noopener noreferrer" aria-label={`Directions to ${h.name}`}>Directions <ArrowUpRight size={13} /></a></div>
+            </li>)}</ul> : <div className="mc-hospital-empty" role="status"><span className="mc-hospital-icon"><Hospital size={26} /></span><h3>{center ? 'No places found' : 'A little closer to care'}</h3><p>{center ? `Try a larger radius than ${radius} km, or choose another location.` : 'Search a location to see hospitals and clinics, ordered by distance.'}</p></div>}
           </div>
-
-          {error && (
-            <div className="bg-surface border border-red-200 rounded-[3px] px-4 py-3 flex items-start gap-2">
-              <span className="text-red-500 text-sm mt-0.5 flex-shrink-0"></span>
-              <p className="text-xs text-red-700">{error}</p>
-            </div>
-          )}
-
-          {loading && (
-            <div className="border-t border-ink p-6 text-center">
-              <div className="w-8 h-8 border-2 border-line border-t-blue-600 rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-sm text-slate-500">Searching nearby hospitals…</p>
-              <p className="text-xs text-slate-400 mt-1">Querying Google Places</p>
-            </div>
-          )}
-
-          {!loading && !hospitals.length && !error && isLoaded && (
-            <div className="border-t border-ink p-8 text-center">
-              <div className="text-4xl mb-3"></div>
-              <p className="text-sm font-semibold text-slate-700">Search for a location</p>
-              <p className="text-xs text-slate-400 mt-2 leading-relaxed">
-                Type an address, click "Use My Location", or click anywhere on the map
-              </p>
-            </div>
-          )}
-
-          {!loading && hospitals.length > 0 && (
-            <div className="border-t border-ink overflow-hidden">
-              <div className="px-4 py-3 border-b border-line flex items-center justify-between sticky top-0 bg-surface">
-                <p className="text-xs font-semibold text-slate-700">
-                  {hospitals.length} result{hospitals.length !== 1 ? 's' : ''} found
-                </p>
-                <span className="text-xs text-slate-400">within {radius}km</span>
-              </div>
-
-              {hospitals.map((h, i) => {
-                const isSelected = selectedIdx === i;
-                return (
-                  <div
-                    key={h.place_id}
-                    onClick={() => selectHospital(h, i)}
-                    className={`px-4 py-3 cursor-pointer border-b border-slate-50 transition-all hover:bg-slate-50 ${ isSelected ? 'bg-sunken border-l-[3px] border-l-blue-500' : '' }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-slate-800 leading-snug">{h.name}</p>
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          <span className="text-xs font-semibold text-slate-500">{h.distKm.toFixed(1)} km</span>
-                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${ h.isHospital ? 'bg-sunken text-blue-700' : 'bg-surface text-emerald-700' }`}>{h.isHospital ? 'Hospital' : 'Medical'}</span>
-                          {h.rating && <span className="font-mono text-xs text-slate-500">{h.rating} rating</span>}
-                        </div>
-                        {h.address && <p className="text-xs text-slate-400 mt-0.5 truncate">{h.address}</p>}
-                        <a
-                          href={`https://www.google.com/maps/dir/?api=1&destination=${h.lat},${h.lng}`}
-                          target="_blank" rel="noreferrer"
-                          onClick={e => e.stopPropagation()}
-                          className="inline-block mt-1.5 text-xs text-blue-600 hover:underline font-medium"
-                        >
-                          Get directions ↗
-                        </a>
-                      </div>
-                      <svg className="w-3.5 h-3.5 text-slate-300 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* ── Map ── */}
-        <div className="flex-1 rounded-[3px] border border-line overflow-hidden relative" style={{ minHeight: 500 }}>
-          {isLoaded ? (
-            <GoogleMap
-              mapContainerStyle={{ width: '100%', height: '100%' }}
-              center={center || MAP_CENTER_DEFAULT}
-              zoom={center ? 14 : 5}
-              options={MAP_OPTIONS}
-              onLoad={onMapLoad}
-              onClick={(e) => {
-                const c = { lat: e.latLng.lat(), lng: e.latLng.lng() };
-                applyCenter(c);
-              }}
-            >
-              {/* User location marker */}
-              {center && (
-                <Marker position={center} icon={userLocationIcon()} zIndex={2000} title="Chosen Location" />
-              )}
-
-              {/* Hospital markers */}
-              {hospitals.map((h, i) => (
-                <Marker
-                  key={h.place_id}
-                  position={{ lat: h.lat, lng: h.lng }}
-                  icon={hospitalIcon(h.isHospital)}
-                  zIndex={1000}
-                  onClick={() => selectHospital(h, i)}
-                />
-              ))}
-
-              {/* Info window for selected hospital */}
-              {selectedIdx !== null && hospitals[selectedIdx] && (
-                <InfoWindow
-                  position={{ lat: hospitals[selectedIdx].lat, lng: hospitals[selectedIdx].lng }}
-                  onCloseClick={() => setSelectedIdx(null)}
-                >
-                  <div style={{ fontFamily: 'system-ui,sans-serif', minWidth: 170, maxWidth: 220 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 3, color: '#222428' }}>
-                      {hospitals[selectedIdx].name}
-                    </div>
-                    <div style={{ color: '#62675e', fontSize: 11 }}>
-                      {hospitals[selectedIdx].distKm.toFixed(1)} km away
-                      {hospitals[selectedIdx].rating ? ` · ${hospitals[selectedIdx].rating} rating` : ''}
-                    </div>
-                    {hospitals[selectedIdx].address && (
-                      <div style={{ color: '#a19c92', fontSize: 11, marginTop: 2 }}>
-                        {hospitals[selectedIdx].address}
-                      </div>
-                    )}
-                    <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${hospitals[selectedIdx].lat},${hospitals[selectedIdx].lng}`}
-                      target="_blank" rel="noreferrer"
-                      style={{
-                        display: 'inline-block', marginTop: 7, padding: '3px 10px',
-                        background: '#ad633f', color: 'white', borderRadius: 5,
-                        fontSize: 11, fontWeight: 600, textDecoration: 'none',
-                      }}
-                    >
-                      Get Directions ↗
-                    </a>
-                  </div>
-                </InfoWindow>
-              )}
-            </GoogleMap>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-slate-100">
-              <div className="text-center">
-                <div className="w-8 h-8 border-2 border-line-strong border-t-blue-600 rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-sm text-slate-500">Loading Google Maps…</p>
-              </div>
-            </div>
-          )}
-
-          {/* Hint overlay when no location selected */}
-          {isLoaded && !center && (
-            <div style={{ pointerEvents: 'none' }} className="absolute inset-0 flex items-center justify-center">
-              <div className="bg-surface/90 backdrop-blur-sm rounded-[3px] px-6 py-4 border border-line text-center max-w-xs">
-                <p className="text-sm font-semibold text-slate-700">Pick a location</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Search an address, use GPS, or click anywhere on the map to find hospitals near that spot
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
+          <nav className="mc-hospital-pagination" aria-label="Hospital result pages"><button type="button" disabled={!hospitals.length || currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous</button><span aria-live="polite">{hospitals.length ? `${currentPage + 1} of ${pages}` : 'No results yet'}</span><button type="button" disabled={!hospitals.length || currentPage + 1 >= pages} onClick={() => setPage(currentPage + 1)}>Next</button></nav>
+          <p className="mc-hospital-data-note">OpenStreetMap listings · Contact the facility to confirm services.</p>
+        </section>
       </div>
     </Page>
   );

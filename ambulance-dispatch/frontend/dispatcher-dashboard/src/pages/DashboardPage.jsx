@@ -26,7 +26,7 @@ import supabase from '../services/supabase';
 import { incidentsApi, assignmentsApi } from '../services/api';
 import { dispatchBroadcast, DISPATCH_EVENTS } from '../services/dispatchBroadcast';
 import { useNavigate } from 'react-router-dom';
-import { T, MONO, SERIF, tagSx, btnSx } from '../theme/tokens';
+import { T, MONO, SERIF, tagSx, btnSx } from '../theme/dispatchTokens';
 
 /* ── Great-circle distance in km ── */
 function hav(lat1, lon1, lat2, lon2) {
@@ -61,7 +61,7 @@ function Logo() {
       <rect x="1" y="1" width="6" height="6" fill={T.tx} />
       <rect x="11" y="1" width="6" height="6" fill={T.tx} />
       <rect x="1" y="11" width="6" height="6" fill={T.tx} />
-      <rect x="11" y="11" width="6" height="6" fill={T.r} />
+      <rect x="11" y="11" width="6" height="6" fill="#e0703f" />
     </svg>
   );
 }
@@ -69,14 +69,14 @@ function Logo() {
 /* ── Segmented control ── */
 function Segmented({ items, value, onChange, fullWidth = false, label }) {
   return (
-    <Box role="tablist" aria-label={label} sx={{ display: 'flex', border: `1px solid ${T.bd2}`, borderRadius: '3px', overflow: 'hidden', width: fullWidth ? '100%' : 'auto' }}>
-      {items.map((it, i) => {
+    <Box role="tablist" aria-label={label} sx={{ display: 'flex', border: `1px solid ${T.bd2}`, borderRadius: '999px', p:'3px', gap:'3px', background:T.sf, overflow: 'hidden', width: fullWidth ? '100%' : { xs:'100%', sm:'auto' }, ...(label === 'View' && { order:{ xs:3, sm:0 }, flexShrink:0 }) }}>
+      {items.map((it) => {
         const on = it.key === value;
         return (
           <Box key={it.key} component="button" type="button" role="tab" aria-selected={on} onClick={() => onChange(it.key)}
             sx={{
               flex: fullWidth ? 1 : 'none', height: 32, px: '14px', border: 0,
-              borderLeft: i ? `1px solid ${T.bd2}` : 0,
+              borderRadius:'999px',
               background: on ? T.tx : 'transparent', color: on ? T.bg : T.tx,
               font: 'inherit', fontSize: 13.5, cursor: 'pointer', whiteSpace: 'nowrap',
               '&:focus-visible': { outline: `2px solid ${T.ac}`, outlineOffset: -2 },
@@ -89,7 +89,7 @@ function Segmented({ items, value, onChange, fullWidth = false, label }) {
   );
 }
 
-const sectionHead = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: '8px', borderBottom: `1px solid ${T.tx}` };
+const sectionHead = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: '8px', borderBottom: `1px solid ${T.bd}` };
 
 const NEXT_STEP = {
   DISPATCHED:   { to: 'EN_ROUTE',     label: 'Mark en route',        note: ['Ambulance marked en route', 'info'] },
@@ -109,6 +109,7 @@ export default function DashboardPage({ user, onLogout }) {
   const [activeAssignment, setActiveAssignment]     = useState(null);
   const [focusAmbulance, setFocusAmbulance]         = useState(null);
   const [filter, setFilter]                         = useState('all');
+  const [mobilePanel, setMobilePanel] = useState('map');
   const [view, setView]                             = useState('ops'); // 'ops' | 'ai'
   const [toolsAnchor, setToolsAnchor]               = useState(null);
   const [userAnchor, setUserAnchor]                 = useState(null);
@@ -263,13 +264,13 @@ export default function DashboardPage({ user, onLogout }) {
   });
 
   return (
-    <Box sx={{ display:'flex', flexDirection:'column', height:'100vh', width:'100%', background:T.bg, color:T.tx, overflow:'hidden' }}>
+    <Box sx={{ display:'flex', flexDirection:'column', height:'100vh', width:'100%', background:T.bg, color:T.tx, overflow:'hidden', p:{ xs:'8px', md:'16px' }, gap:'14px' }}>
 
       {/* ══ HEADER ══ */}
-      <Box component="header" sx={{ height:64, flexShrink:0, display:'flex', alignItems:'center', gap:'16px', px:{ xs:'16px', md:'32px' }, borderBottom:`1px solid ${T.bd}` }}>
+      <Box component="header" sx={{ height:{ xs:112, sm:64 }, flexWrap:{ xs:'wrap', sm:'nowrap' }, py:{ xs:'10px', sm:0 }, borderRadius:'24px', background:T.panel, flexShrink:0, display:'flex', alignItems:'center', gap:{ xs:'8px', sm:'16px' }, px:{ xs:'16px', md:'32px' }, border:`1px solid ${T.bd}` }}>
         <Box sx={{ display:'flex', alignItems:'center', gap:'10px', flex:1, minWidth:0 }}>
           <Logo />
-          <Typography sx={{ fontFamily:SERIF, fontSize:22, letterSpacing:'-0.01em' }}>MediCluster</Typography>
+          <Typography sx={{ fontFamily:SERIF, fontWeight:600, fontSize:22, letterSpacing:'-0.01em' }}>MediCluster</Typography>
           <Typography sx={{ display:{ xs:'none', md:'block' }, fontFamily:MONO, fontSize:11, letterSpacing:'0.08em', color:T.tx3, pl:'12px', borderLeft:`1px solid ${T.bd2}` }}>
             DISPATCH CENTER
           </Typography>
@@ -278,7 +279,7 @@ export default function DashboardPage({ user, onLogout }) {
         <Segmented label="View" value={view} onChange={setView}
           items={[{ key:'ops', label:'Operations' }, { key:'ai', label:'AI insights' }]} />
 
-        <Box sx={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:'12px', flex:1, minWidth:0 }}>
+        <Box sx={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:{ xs:'6px', sm:'12px' }, flex:{ xs:'none', sm:1 }, minWidth:0 }}>
           <Box sx={{ display:{ xs:'none', lg:'block' } }}><WeatherWidget compact /></Box>
           <Box sx={{ display:{ xs:'none', sm:'flex' }, alignItems:'center', gap:'6px', fontFamily:MONO, fontSize:11.5, color:T.gT, letterSpacing:'0.04em' }}>
             <Box sx={{ width:6, height:6, borderRadius:'50%', background:T.g }} />LIVE · {clock}
@@ -333,19 +334,23 @@ export default function DashboardPage({ user, onLogout }) {
 
       {view === 'ops' && <>
       {/* ══ KPI STRIP ══ */}
-      <Box sx={{ flexShrink:0, px:{ xs:'16px', md:'32px' }, py:'16px', borderBottom:`1px solid ${T.bd}` }}>
+      <Box sx={{ flexShrink:0, px:{ xs:0, md:0 }, py:0 }}>
         <StatsCards stats={stats} incidents={incidents} ambulances={fleet} />
       </Box>
 
+      <Box sx={{ display:{ xs:'block', lg:'none' } }}>
+        <Segmented label="Workspace panel" fullWidth value={mobilePanel} onChange={setMobilePanel}
+          items={[{key:'incidents',label:`Incidents · ${activeCount}`},{key:'map',label:'Live map'},{key:'units',label:'Units & radio'}]} />
+      </Box>
       {/* ══ BODY ══ */}
       <Box sx={{
-        flex:1, minHeight:0, overflow:{ xs:'auto', lg:'hidden' },
-        display:'grid', gap:'20px', p:{ xs:'16px', md:'20px 32px' },
-        gridTemplateColumns:{ xs:'minmax(0,1fr)', lg:'340px minmax(0,1fr) 340px' },
+        flex:1, minHeight:0, overflow:'hidden',
+        display:'grid', gap:'16px', p:0,
+        gridTemplateRows:'minmax(0,1fr)', gridTemplateColumns:{ xs:'minmax(0,1fr)', lg:'300px minmax(0,1fr) 310px', xl:'330px minmax(0,1fr) 330px' },
       }}>
 
         {/* ── Incidents ── */}
-        <Box component="section" aria-label="Incidents" sx={{ display:'flex', flexDirection:'column', gap:'12px', minHeight:0 }}>
+        <Box component="section" aria-label="Incidents" sx={{ display:{ xs:mobilePanel === 'incidents' ? 'flex' : 'none', lg:'flex' }, flexDirection:'column', gap:'12px', minHeight:0, minWidth:0, p:'18px', background:T.panel, border:`1px solid ${T.bd}`, borderRadius:'24px' }}>
           <Box sx={sectionHead}>
             <Typography sx={{ fontSize:13.5, fontWeight:600 }}>
               Incidents <Box component="span" sx={{ color:T.tx3, fontWeight:400 }}>{activeCount}</Box>
@@ -360,8 +365,8 @@ export default function DashboardPage({ user, onLogout }) {
         </Box>
 
         {/* ── Map + selected incident ── */}
-        <Box sx={{ display:'flex', flexDirection:'column', gap:'14px', minHeight:0, minWidth:0 }}>
-          <Box sx={{ flex:1, minHeight:{ xs:360, lg:0 }, position:'relative', overflow:'clip', border:`1px solid ${T.bd}`, background:T.sf2 }}>
+        <Box sx={{ display:{ xs:mobilePanel === 'map' ? 'flex' : 'none', lg:'flex' }, flexDirection:'column', gap:'14px', minHeight:0, minWidth:0 }}>
+          <Box sx={{ flex:1, minHeight:180, position:'relative', borderRadius:'24px', overflow:'clip', border:`1px solid ${T.bd}`, background:T.sf2 }}>
             <DispatchMap
               incidents={incidents.filter(i=>!['RESOLVED','CANCELLED'].includes(i.status))}
               ambulances={fleet}
@@ -374,7 +379,7 @@ export default function DashboardPage({ user, onLogout }) {
               onHospitalClick={(h)=>console.log('Hospital:',h)}
             />
 
-            <Box sx={{ position:'absolute', bottom:12, left:12, zIndex:1000, display:'flex', gap:'14px', flexWrap:'wrap', background:T.sf, px:'10px', py:'6px', border:`1px solid ${T.bd}`, fontSize:12, color:T.tx2 }}>
+            <Box sx={{ position:'absolute', bottom:12, left:12, zIndex:1000, display:'flex', gap:'14px', flexWrap:'wrap', background:T.sf, borderRadius:'999px', px:'12px', py:'8px', border:`1px solid ${T.bd}`, fontSize:12, color:T.tx2 }}>
               {[[T.g,'Standby','50%'],[T.ac,'En route','50%'],[T.r,'Incident','50%'],[T.tx,'Hospital','1px']].map(([c,l,r]) => (
                 <Box key={l} sx={{ display:'flex', alignItems:'center', gap:'6px' }}>
                   <Box sx={{ width:8, height:8, borderRadius:r, background:c }} />{l}
@@ -394,7 +399,7 @@ export default function DashboardPage({ user, onLogout }) {
           </Box>
 
           {/* Selected incident */}
-          <Box component="section" aria-label="Selected incident" sx={{ flexShrink:0, p:'16px 18px', background:T.sf, border:`1px solid ${T.bd}` }}>
+          <Box component="section" aria-label="Selected incident" sx={{ flexShrink:0, p:'16px 18px', maxHeight:'45%', overflow:'auto', borderRadius:'24px', background:T.panel, border:`1px solid ${T.bd}` }}>
             {!sel ? (
               <Typography sx={{ fontSize:13.5, color:T.tx3 }}>Select an incident to see details and dispatch a unit.</Typography>
             ) : (
@@ -458,7 +463,7 @@ export default function DashboardPage({ user, onLogout }) {
         </Box>
 
         {/* ── Units + radio ── */}
-        <Box sx={{ display:'flex', flexDirection:'column', gap:'28px', minHeight:0, overflow:{ lg:'auto' } }}>
+        <Box sx={{ display:{ xs:mobilePanel === 'units' ? 'flex' : 'none', lg:'flex' }, flexDirection:'column', gap:'16px', minHeight:0, minWidth:0, overflow:'auto' }}>
           <UnitsPanel ambulances={fleet} onSelect={(amb) => setFocusAmbulance({ ...amb, _ts: Date.now() })} />
           <QuickCommsPanel ambulances={fleet} />
         </Box>

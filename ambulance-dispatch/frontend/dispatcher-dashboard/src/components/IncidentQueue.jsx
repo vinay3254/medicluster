@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import { T, MONO, tagSx } from '../theme/tokens';
+import { T, MONO, tagSx } from '../theme/dispatchTokens';
 import { FILTERS } from './incidentFilters';
 
 const STATUS = {
@@ -35,7 +35,7 @@ export default function IncidentQueue({ incidents, onSelect, selectedId, filter 
   }
 
   return (
-    <Box role="listbox" aria-label="Incidents">
+    <Box role="listbox" aria-label="Incidents" sx={{ display:"flex", flexDirection:"column", gap:"10px" }}>
       {sorted.map(inc => {
         const st = STATUS[inc.status] || STATUS.PENDING;
         const selected = inc.id === selectedId;
@@ -50,10 +50,10 @@ export default function IncidentQueue({ incidents, onSelect, selectedId, filter 
             sx={{
               display: 'flex', flexDirection: 'column', gap: '6px',
               p: '12px 10px 12px 12px', cursor: 'pointer',
-              borderBottom: `1px solid ${T.bd}`,
-              borderLeft: `3px solid ${selected ? T.tx : 'transparent'}`,
-              background: selected ? T.sf : 'transparent',
-              '&:hover': { background: T.sf },
+              border: `1px solid ${selected ? T.ac : T.bd}`, borderRadius:'16px',
+              boxShadow: selected ? `inset 3px 0 0 ${T.ac}` : 'none',
+              background: selected ? T.sf2 : T.sf,
+              '&:hover': { background: T.sf2 },
               '&:focus-visible': { outline: `2px solid ${T.ac}`, outlineOffset: -2 },
             }}
           >

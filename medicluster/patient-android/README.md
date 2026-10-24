@@ -5,7 +5,7 @@ not clinician or dispatch screens. Internet is required. It uses the same linked
 OTP login and patient API authorization as the website. The website also supports linked
 email OTP and Google sign-in when configured on the server. SMS and EmailJS delivery
 must be configured separately. Installing the APK does not configure authentication
-providers or background medicine alerts.
+providers. Background medicine alerts require notification permission after login.
 
 ## Design
 
@@ -13,7 +13,7 @@ A small native Android WebView shell loads `https://medicluster-frontend.onrende
 Patient routes stay in the app. Phone calls open the dialer; external HTTPS links open
 another app. Non-patient routes on the clinic origin are blocked. The frontend recognizes
 the shell's user agent to hide staff links and the desktop phone frame. This hint is for
-presentation, not authentication. There is no JavaScript-to-native bridge.
+presentation, not authentication. There is no general JavaScript-to-native bridge.
 
 Google sign-in leaves the WebView for the system browser through the exact configured
 HTTPS `/api/patient-auth/google/start?platform=android&handoff_challenge=…` endpoint.
@@ -43,9 +43,45 @@ return and account selection still need verification on a physical Android devic
 
 Location permission is requested only for the configured HTTPS origin. Denying permission
 leaves the rest of the portal usable. Photo selection uses Android's picker. HTTPS errors
-are never bypassed. An unavailable server shows a retry screen. Records and reminders
-need a network connection; the native app does not add offline clinical storage or
-reliable alarms when the app is closed.
+are never bypassed. An unavailable server shows a retry screen. The patient frontend can show its account-scoped offline snapshots. Native reminders persist
+independently of the WebView after a successful schedule sync; server changes require a
+subsequent sync in the app.
+
+## Background medicine reminders
+
+From reminder settings, explicitly enable notifications (Android 13+) and optionally allow
+exact alarms (Android 12+). Denying either leaves the portal usable. The native status event
+reports notification permission/channel status, exact-alarm availability, and scheduled alarm
+count. Without exact-alarm access Android may delay delivery; the app uses inexact alarms.
+Enabling notifications and allowing exact alarms can require two taps on the settings action.
+
+`nativeReminders.js` supplies `syncNativeReminders(patientId, reminders)`,
+`clearNativeReminders()` on logout, `requestNativeReminderPermission()` from a user action,
+`getNativeReminderStatus()`, and `subscribeNativeReminderStatus(callback)`. Sync after loading,
+adding, editing, deleting, or taking a medicine. The adapter sets
+`window.MediClusterReminderSchedule` and navigates only to fixed
+`mediclusterpatient://reminder-sync` or `mediclusterpatient://enable-reminders` actions.
+Native accepts these requests only for top-level navigation from its configured HTTPS patient
+page; permission navigation also requires a WebView user gesture. It reads a bounded JSON
+snapshot with `evaluateJavascript`, validates it, then saves it in app-private storage.
+No intent or arbitrary URL can supply a reminder payload. Old APKs need updating for this feature.
+
+Daily and weekly medicine times use the device's local calendar. Inactive/as-needed medicines
+and recorded completed doses do not create alarms. Nonexistent daylight-saving times are
+skipped for that day. Logout cancels alarms and removes the persisted medicine snapshot.
+Notifications show medicine/dosage and open the fixed patient home, where authentication
+still applies; the lock screen hides medicine content. Selected report uploads accept PDF,
+JPEG, PNG, and WebP as requested by the portal.
+
+The rolling schedule covers today plus seven days, limits pending alarms to 400 distinct due
+times, and refreshes on delivery and a twelve-hour maintenance alarm. Reboot, clock/timezone
+changes, app updates, and exact-alarm grants rebuild the schedule without opening the WebView.
+The schedule is capped at 100 medicines, 12 times per medicine, and 256 KiB. The native snapshot
+is replaced on every successful sync; it never independently fetches patient records. Alerts
+therefore reflect the last synced schedule, including offline dose updates, until the next sync.
+Android force-stop, disabled app notifications, and some manufacturers' battery restrictions
+can prevent delivery; reopen the app after force-stop or exact-alarm permission revocation.
+Device testing is still required for notification delivery, reboot, and battery restrictions.
 
 ## Build and publish
 

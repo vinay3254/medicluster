@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, Typography, Button } from '@mui/material';
 
-import { T, MONO, monoLabelSx, btnSx } from '../theme/tokens';
+import { T, MONO, monoLabelSx, btnSx } from '../theme/dispatchTokens';
 
 const PRESETS = [
   { label:'All units: Stand by',        category:'ops',    text:'All units: Stand by for further instructions.' },
@@ -63,8 +63,8 @@ export default function QuickCommsPanel({ ambulances = [] }) {
   const metaSx = { fontFamily: MONO, fontSize: 10.5, color: T.tx3, mt: '4px' };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', pb: '8px', borderBottom: `1px solid ${T.tx}` }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 400, flex: 1, p:'18px', borderRadius:'24px', background:T.panel, border:`1px solid ${T.bd}` }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', pb: '8px', borderBottom: `1px solid ${T.bd}` }}>
         <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>Radio</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '6px', fontFamily: MONO, fontSize: 11, color: T.gT }}>
           <Box sx={{ width: 6, height: 6, borderRadius: '50%', background: T.g }} />CH 1
@@ -77,7 +77,7 @@ export default function QuickCommsPanel({ ambulances = [] }) {
           return (
             <Box key={msg.id} sx={{ display: 'flex', flexDirection: 'column', alignItems: fromControl ? 'flex-end' : 'flex-start' }}>
               <Box sx={{
-                maxWidth: '86%', p: '9px 11px', borderRadius: '2px', fontSize: 13.5, lineHeight: 1.45,
+                maxWidth: '86%', p: '9px 11px', borderRadius: '16px', fontSize: 13.5, lineHeight: 1.45,
                 background: fromControl ? T.tx : T.sf2, color: fromControl ? T.bg : T.tx,
               }}>
                 {msg.text}
@@ -92,7 +92,7 @@ export default function QuickCommsPanel({ ambulances = [] }) {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Typography component="label" htmlFor="radio-unit" sx={monoLabelSx}>To</Typography>
           <Box component="select" id="radio-unit" value={unit} onChange={e => setUnit(e.target.value)}
-            sx={{ flex: 1, height: 32, px: '8px', border: `1px solid ${T.bd2}`, borderRadius: '3px', background: T.sf, color: T.tx, font: 'inherit', fontSize: 13 }}>
+            sx={{ flex: 1, height: 32, px: '8px', border: `1px solid ${T.bd2}`, borderRadius: '999px', background: T.sf, color: T.tx, font: 'inherit', fontSize: 13 }}>
             {units.map(u => <option key={u}>{u}</option>)}
           </Box>
         </Box>
@@ -108,7 +108,7 @@ export default function QuickCommsPanel({ ambulances = [] }) {
         <Box component="form" onSubmit={e => { e.preventDefault(); send(custom); }} sx={{ display: 'flex', gap: '6px' }}>
           <Box component="input" value={custom} onChange={e => setCustom(e.target.value)}
             placeholder="Message" aria-label={`Message to ${unit}`}
-            sx={{ flex: 1, minWidth: 0, height: 36, px: '10px', border: `1px solid ${T.bd2}`, borderRadius: '3px', background: T.sf, color: T.tx, font: 'inherit', fontSize: 13, outline: 'none', '&:focus': { borderColor: T.tx } }} />
+            sx={{ flex: 1, minWidth: 0, height: 36, px: '10px', border: `1px solid ${T.bd2}`, borderRadius: '999px', background: T.sf, color: T.tx, font: 'inherit', fontSize: 13, outline: 'none', '&:focus': { borderColor: T.tx } }} />
           <Button type="submit" disabled={sending || !custom.trim()} sx={{ ...btnSx(true), height: 36 }}>
             {sending ? 'Sending…' : 'Send'}
           </Button>

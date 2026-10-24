@@ -227,3 +227,23 @@ test('media routes retain API IDs, stream bytes and keep metadata when storage d
   deleteMissing = true;
   assert.equal((await fetchApp(`${origin}/api/media/upload`, { method: 'POST', body: form })).status, 503);
 });
+
+test('signed private links use a 120-second lifetime and reject unexpected provider URLs', async t => {
+  let signedURL = `/object/sign/medicluster-media/${key}?token=fixture-short-token`;
+  provider(t, (url, options) => {
+    assert.equal(url.pathname, `/storage/v1/object/sign/medicluster-media/${key}`);
+    assert.equal(options.method, 'POST');
+    assert.deepEqual(JSON.parse(options.body), { expiresIn: 120 });
+    return Response.json({ signedURL });
+  });
+  const storage = require('../services/mediaStorage');
+  const before = Date.now();
+  const result = await storage.signedObjectLink({ gridfs_id: fileId, original_name: 'report name.pdf' }, true);
+  const url = new URL(result.url);
+  assert.equal(url.origin, 'https://storage-fixture.supabase.co');
+  assert.equal(url.searchParams.get('download'), 'report name.pdf');
+  assert.equal(url.searchParams.get('token'), 'fixture-short-token');
+  assert.ok(Date.parse(result.expiresAt) >= before + 120000 && Date.parse(result.expiresAt) <= Date.now() + 120000);
+  signedURL = 'https://evil.example/document';
+  await assert.rejects(storage.signedObjectLink({ gridfs_id: fileId }), { status: 503 });
+});

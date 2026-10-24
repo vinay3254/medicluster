@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { logReading } from "../../api/apiClient";
 import { usePatient } from "../PatientApp";
 import { TopBar, ErrorNote } from "../ui";
 import { READING_TYPES, GLUCOSE_CONTEXTS, assess, glucoseTarget } from "../health";
@@ -42,7 +41,7 @@ function feedback(reading, history) {
 }
 
 export default function LogReadingScreen() {
-  const { patientId, readings, refreshReadings, apiError } = usePatient();
+  const { readings, saveReading, apiError } = usePatient();
   const navigate = useNavigate();
   const [type, setType] = useState("glucose");
   const [entry, setEntry] = useState("");
@@ -73,8 +72,7 @@ export default function LogReadingScreen() {
     setSaving(true);
     setError("");
     try {
-      await logReading(patientId, reading);
-      await refreshReadings();
+      await saveReading(reading);
       navigate("/app/health");
     } catch (err) {
       setError(apiError(err));

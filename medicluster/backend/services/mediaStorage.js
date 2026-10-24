@@ -1,5 +1,5 @@
 const { Readable } = require('node:stream');
-const { request } = require('../db/supabase');
+const { request, getConfig } = require('../db/supabase');
 const { isValidId } = require('../db/ids');
 
 const BUCKET = 'medicluster-media';
@@ -67,4 +67,19 @@ async function deleteObject(media) {
   await storageRequest(`${BUCKET}/${objectKey(media)}`, { method: 'DELETE' }, true);
 }
 
-module.exports = { storageKeyFor, uploadObject, downloadObject, readObject, deleteObject };
+async function signedObjectLink(media, download = false) {
+  const key = objectKey(media);
+  const response = await storageRequest(`sign/${BUCKET}/${key}`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ expiresIn: 120 }),
+  }, true);
+  let data;
+  try { data = await response.json(); } catch { throw storageError(); }
+  const expectedPath = `/object/sign/${BUCKET}/${key}`;
+  if (typeof data.signedURL !== 'string' || !data.signedURL.startsWith(`${expectedPath}?`)) throw storageError();
+  const url = new URL(`${getConfig().url}/storage/v1${data.signedURL}`);
+  if (url.pathname !== `/storage/v1${expectedPath}` || !url.searchParams.get('token')) throw storageError();
+  if (download) url.searchParams.set('download', media.original_name || 'document');
+  return { url: url.toString(), expiresAt: new Date(Date.now() + 120000).toISOString() };
+}
+
+module.exports = { storageKeyFor, uploadObject, downloadObject, readObject, deleteObject, signedObjectLink };

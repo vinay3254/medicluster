@@ -342,8 +342,8 @@ export async function deleteReminder(id) {
 }
 
 /** Mark one dose slot (date YYYY-MM-DD, time HH:MM) as taken. Idempotent. */
-export async function markDoseTaken(reminderId, date, time) {
-  const res = await api.post(`/reminders/${reminderId}/doses`, { date, time });
+export async function markDoseTaken(reminderId, date, time, idempotencyKey) {
+  const res = await api.post(`/reminders/${reminderId}/doses`, { date, time }, idempotencyKey ? { headers: { "Idempotency-Key": idempotencyKey } } : undefined);
   return res.data;
 }
 
@@ -368,8 +368,8 @@ export async function listReadings(patientId) {
 }
 
 /** Log a reading: { type: glucose|bp|weight, value, diastolic?, context? }. */
-export async function logReading(patientId, reading) {
-  const res = await api.post(`/patient-app/${encodeURIComponent(patientId)}/readings`, reading);
+export async function logReading(patientId, reading, idempotencyKey) {
+  const res = await api.post(`/patient-app/${encodeURIComponent(patientId)}/readings`, reading, idempotencyKey ? { headers: { "Idempotency-Key": idempotencyKey } } : undefined);
   return res.data;
 }
 

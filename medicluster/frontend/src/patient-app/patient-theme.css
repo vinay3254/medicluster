@@ -1,0 +1,99 @@
+/* Patient care uses the same ivory, sage, copper and forest palette as MediCluster. */
+.mc-patient-app { background:#f3f5ee; color:#17221d; font-family:'Hanken Grotesk','IBM Plex Sans',sans-serif; }
+.mc-patient-app :is(h1,h2,h3,p) { margin:0; }
+.mc-patient-app :is(h1,h2,h3,.font-serif) { font-family:inherit; letter-spacing:-.035em; }
+.mc-patient-app :is(button,input,select,textarea) { font-family:inherit; }
+.mc-patient-app :is(button,a,input,select,textarea):focus-visible { outline:2px solid #547650; outline-offset:3px; }
+.mc-patient-app button:disabled { opacity:.45; cursor:default; }
+.mc-patient-app .mc-patient-screen { min-height:0; overflow:hidden; }
+.mc-patient-app .pt-view,.mc-patient-app .pt-home { display:flex; flex-direction:column; min-height:0; flex:1; padding:18px; gap:12px; }
+.mc-patient-app .mc-patient-topbar { min-height:54px; padding:8px 18px; background:#f3f5ee; }
+.mc-patient-app .mc-patient-topbar a { color:#52644e; }
+.mc-patient-app .mc-patient-tabs { grid-template-columns:repeat(5,minmax(0,1fr)); padding:6px 8px max(8px,env(safe-area-inset-bottom)); gap:3px; }
+.mc-patient-app .mc-patient-tabs a { min-height:52px; border-radius:15px; font-size:10px; gap:4px; }
+.mc-patient-app .mc-patient-greeting { flex-shrink:0; gap:8px; }
+.mc-patient-app .mc-patient-greeting h1 { font-size:25px; line-height:1.2; }
+.mc-patient-app .mc-patient-avatar { width:40px; height:40px; }
+.pt-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-shrink:0; }
+.pt-heading > div { min-width:0; }
+.mc-patient-app .pt-heading h1 { font-size:29px; line-height:1.18; font-weight:500; }
+.pt-heading p:not(.pt-eyebrow) { margin-top:5px; font-size:12px; color:#6a7465; }
+.pt-eyebrow { font-size:9px; letter-spacing:.12em; color:#7a8573; margin-bottom:7px !important; }
+.pt-card { display:flex; flex-direction:column; min-height:0; min-width:0; padding:16px; gap:12px; border:1px solid #e1e7da; border-radius:23px; background:#fff; }
+.pt-grow { flex:1; min-height:0; }
+.pt-stack { display:flex; flex-direction:column; gap:12px; min-height:0; }
+.pt-row { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; }
+.pt-row > div { min-width:0; }
+.mc-patient-app .pt-card h2 { font-size:18px; font-weight:500; }
+.pt-muted { font-size:12px; color:#697363; line-height:1.55; }
+.pt-button,.pt-button-secondary { display:inline-flex; align-items:center; justify-content:center; gap:7px; flex-shrink:0; min-height:40px; padding:9px 16px; border-radius:999px; border:1px solid #17251d; background:#17251d; color:#fbfaf7; font-size:12px; text-align:center; cursor:pointer; text-decoration:none; }
+.pt-button-secondary { border-color:#cfd9c5; background:transparent; color:#17251d; }
+.pt-text-button { color:#526d46; background:transparent; border:0; min-height:30px; font-size:12px; text-align:left; cursor:pointer; }
+.pt-bottom { margin-top:auto; }
+.pt-actions { display:flex; gap:8px; align-items:center; flex-shrink:0; }
+.pt-actions > :is(button,a) { flex:1; }
+.pt-field { display:flex; flex-direction:column; min-width:0; gap:6px; font-size:12px; color:#52604f; }
+.pt-field :is(input,select,textarea) { width:100%; min-width:0; padding:10px 12px; min-height:40px; border:1px solid #d8dfcf; border-radius:12px; background:#fbfcf8; color:#17221d; font-size:13px; }
+.pt-field textarea { resize:none; }
+.pt-view-tabs { display:flex; flex-shrink:0; align-items:center; padding:4px; gap:4px; border-radius:15px; background:#e7eddf; }
+.pt-view-tabs button { flex:1; min-width:0; min-height:34px; padding:7px 9px; border:0; border-radius:12px; font-size:12px; color:#626f5d; background:transparent; cursor:pointer; white-space:nowrap; }
+.pt-view-tabs button[aria-selected=true] { background:#fff; color:#17221d; box-shadow:0 2px 8px #17221d05; }
+.pt-paged { display:flex; flex-direction:column; flex:1; min-height:0; gap:8px; }
+.pt-page-rows { display:flex; flex-direction:column; flex:1; min-height:0; gap:8px; }
+.pt-list-row { display:flex; align-items:center; justify-content:space-between; text-align:left; gap:10px; width:100%; flex-shrink:0; min-height:80px; height:80px; padding:12px; border:1px solid #e1e7da; border-radius:16px; background:#fbfcf9; color:#17221d; }
+.pt-list-row > div { min-width:0; }
+.pt-list-row strong { display:block; font-size:13px; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pt-list-row p { font-size:12px; color:#596651; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; }
+.pt-list-row small { font-size:10px; color:#718066; }
+.pt-medicine-row { height:104px; min-height:104px; }
+.pt-pill { display:inline-block; flex-shrink:0; padding:5px 9px; background:#e8efdf; color:#526b45; border-radius:99px; font-size:10px; line-height:1.2; }
+.pt-positive { background:#e1efdf; color:#345e39; }
+.pt-empty { flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:12px; text-align:center; font-size:13px; color:#66735e; line-height:1.6; }
+.pt-empty strong { color:#384c32; font-weight:500; }
+.pt-shortcuts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); flex-shrink:0; gap:10px; }
+.pt-shortcut { position:relative; display:flex; flex-direction:column; gap:6px; min-width:0; padding:14px; border-radius:20px; background:#e4ebdc; color:#17251d; text-decoration:none; }
+.pt-shortcut:nth-child(2) { background:#f2eade; }
+.pt-shortcut:nth-child(3) { background:#fff; border:1px solid #e1e7da; }
+.pt-shortcut:nth-child(4) { background:#dce6d4; }
+.pt-shortcut strong { font-size:13px; font-weight:500; }
+.pt-shortcut span { font-size:10px; color:#697363; }
+.pt-shortcut-arrow { position:absolute; top:14px; right:12px; }
+.pt-dose { display:flex; flex-direction:column; gap:10px; flex:1; min-height:0; }
+.pt-dose > strong { font-size:18px; font-weight:500; }
+.pt-dose-time { display:flex; justify-content:space-between; align-items:center; font-size:22px; letter-spacing:-.03em; }
+.pt-dose-time span { font-size:10px; color:#718066; letter-spacing:0; }
+.pt-dose .pt-actions { margin-top:auto; }
+.pt-emergency-link { display:flex; flex-shrink:0; align-items:center; gap:8px; min-height:42px; padding:10px 14px; border-radius:16px; background:#f4e9df; color:#8b4431; font-size:11px; text-decoration:none; }
+.pt-emergency-link span { flex:1; }
+.pt-offline-strip { flex-shrink:0; padding:7px 14px; font-size:10px; background:#eee7d5; color:#705c26; }
+.pt-message { border-radius:14px; padding:10px 12px; font-size:12px; line-height:1.5; background:#e4ebdc; color:#526446; }
+.pt-message-error { background:#f6e8e2; color:#8e4138; }
+.pt-clamp { display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:3; overflow:hidden; overflow-wrap:anywhere; font-size:12px; line-height:1.6; }
+.pt-document-detail { flex:1; min-height:0; }
+.pt-document-preview { width:100%; height:min(26vh,180px); min-height:0; object-fit:contain; border-radius:14px; background:#f1f4ec; }
+.mc-patient-app .mc-pagination { padding-top:6px; }
+.mc-patient-app .mc-pagination button { min-height:32px; padding:6px 12px; font-size:11px; }
+.mc-patient-app .pt-log { gap:12px; padding:16px 18px; }
+.mc-patient-app .pt-log :is(button,input,select) { border-radius:12px; }
+.pt-map { min-height:0; flex:1; width:100%; border-radius:16px; background:#e5ecdc; }
+.pt-map .leaflet-container { height:100%; width:100%; }
+@media(max-height:720px) {
+  .mc-patient-app .pt-view,.mc-patient-app .pt-home { padding:12px 14px; gap:9px; }
+  .pt-shortcut { padding:10px 12px; gap:4px; border-radius:16px; }
+  .pt-shortcut > svg:first-child { width:16px; height:16px; }
+  .pt-card { padding:12px; gap:9px; }
+  .mc-patient-app .mc-patient-greeting h1 { font-size:22px; }
+  .pt-heading p:not(.pt-eyebrow) { display:none; }
+  .pt-eyebrow { margin-bottom:4px !important; }
+  .mc-patient-app .pt-heading h1 { font-size:25px; }
+  .pt-dose { gap:6px; }
+}
+.pt-sos { display:flex; flex:1; min-height:0; flex-direction:column; align-items:center; justify-content:center; gap:18px; text-align:center; }
+.pt-sos > button { width:150px; height:150px; box-shadow:0 0 0 10px #f1ddd4; background:#a94336; flex-shrink:0; }
+.pt-sos > button svg { width:160px; height:160px; }
+.pt-sos p { font-size:12px; line-height:1.5; color:#6d7465; max-width:240px; }
+.pt-contact { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px; background:#e8edde; border-radius:16px; font-size:12px; }
+.pt-contact p { font-size:11px; color:#65735b; margin-top:4px; }
+.pt-tracking-pin span { display:grid; place-items:center; width:26px; height:26px; border:2px solid #fff; border-radius:50%; background:#476c51; color:#fff; font-size:19px; }
+.pt-tracking-pin.origin span { background:#ad633f; }
+.pt-tracking-pin.hospital span { background:#71845f; }

@@ -4,6 +4,7 @@
  */
 
 const express = require("express");
+const crypto = require("node:crypto");
 const PatientProfile = require("../models/PatientProfile");
 const Reading = require("../models/Reading");
 
@@ -93,13 +94,25 @@ router.post("/:patientId/readings", async (req, res, next) => {
     return res.status(400).json({ error: "diastolic is required for bp" });
   }
   try {
-    const reading = await Reading.create({
+    const values = {
       patientId: req.params.patientId,
       type,
       value,
       diastolic: type === "bp" ? diastolic : null,
       context: type === "glucose" ? (context ?? "") : "",
-    });
+    };
+    const key = req.get('Idempotency-Key');
+    let reading;
+    if (key !== undefined) {
+      if (!/^[a-zA-Z0-9_-]{8,128}$/.test(key)) return res.status(400).json({ error: 'Invalid Idempotency-Key' });
+      const _id = crypto.createHash('sha256').update(JSON.stringify(['reading', req.params.patientId, key])).digest('hex').slice(0, 24);
+      reading = await Reading.findOne({ _id });
+      if (!reading) {
+        try { reading = await Reading.create({ _id, ...values }); }
+        catch (err) { if (err.code !== 11000) throw err; reading = await Reading.findOne({ _id }); }
+      }
+      if (Object.entries(values).some(([field, value]) => reading[field] !== value)) return res.status(409).json({ error: 'Idempotency-Key was already used for another reading' });
+    } else reading = await Reading.create(values);
     return res.status(201).json(reading);
   } catch (err) {
     return next(err);

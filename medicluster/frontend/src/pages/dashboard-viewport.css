@@ -1,0 +1,112 @@
+/* Every dashboard view shares the remaining viewport, including populated results. */
+.mc-dashboard-page .mc-workspace-page-content { overflow: hidden; gap: 12px; }
+.mc-dashboard-page .mc-dashboard-paged { display: grid; grid-template-columns: 264px minmax(0,1fr); grid-template-rows: minmax(0,1fr); flex: 1 1 0; min-height: 0; min-width: 0; gap: 18px; }
+.mc-dashboard-page :is(.mc-dashboard-setup,.mc-dashboard-panes) { display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: visible; }
+.mc-dashboard-page .mc-screen-views { flex: 1 1 0; min-height: 0; min-width: 0; }
+.mc-dashboard-page .mc-view-panel { flex: 1 1 0; min-height: 0; }
+.mc-dashboard-page .mc-view-panel > :is(.panel,.mc-fit-card,.mc-section-card,.mc-dashboard-empty) { flex: 1; min-height: 0; }
+.mc-dashboard-page .mc-dashboard-empty { border: 1px dashed #d7dacf; border-radius: 24px; background: #f4f6ef; }
+.mc-dashboard-page .mc-algorithm-content { overflow: visible; flex: 0; }
+.mc-dashboard-page .mc-algorithm-card { justify-content: space-between; }
+.mc-dashboard-page .mc-algorithm-card .mc-cluster-run { margin-top: auto; }
+.mc-dashboard-page .mc-screen-view-tabs { flex-wrap: nowrap; gap: 2px; }
+.mc-dashboard-page .mc-screen-view-tabs button { padding-inline: 10px; white-space: nowrap; }
+.mc-dashboard-page .mc-result-chart { display: flex; flex: 1; min-height: 0; }
+.mc-dashboard-page .mc-result-chart > .panel { flex: 1; min-height: 0; width: 100%; }
+.mc-dashboard-page .mc-scatter-canvas { flex: 1; min-height: 0; }
+.mc-dashboard-page .mc-result-quality { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; min-height: 0; }
+.mc-dashboard-page .mc-patient-rows { overflow: visible; }
+.mc-dashboard-page .mc-patient-table { display: flex; flex-direction: column; gap: 10px; }
+.mc-dashboard-page .mc-patient-table > * { margin-top: 0; flex-shrink: 0; }
+.mc-dashboard-page .mc-patient-table > :last-child { margin-top: auto; }
+.mc-dashboard-page .mc-patient-table :is(th,td) { padding-inline: 7px; }
+.mc-dashboard-page .mc-patient-table td .btn-secondary { min-height: 32px; padding-inline: 10px; }
+.mc-patient-column,.mc-dashboard-mobile-switch { display: none; }
+@media(max-width:1450px) {
+  .mc-dashboard-page .mc-dashboard-panes > .mc-screen-views > .mc-screen-view-tabs { display: none; }
+  .mc-dashboard-page .mc-dashboard-panes > .mc-screen-views > .mc-screen-view-select { display: block; }
+  .mc-dashboard-page .mc-screen-view-select select { width: 100%; min-height: 40px; padding: 8px 14px; border: 1px solid #d7dacf; border-radius: 14px; background: #eaf0e3; font: inherit; font-size: 13px; }
+}
+@media(max-width:1100px) and (min-width:860px) {
+  .mc-dashboard-page .mc-dashboard-paged { grid-template-columns: 220px minmax(0,1fr); gap: 12px; }
+}
+@media(max-width:859px) {
+  .mc-dashboard-page { gap: 14px; }
+  .mc-dashboard-page .mc-page-heading > p { display: none; }
+  .mc-dashboard-page .mc-dashboard-paged { grid-template-columns: minmax(0,1fr); }
+  .mc-dashboard-mobile-switch { display: flex; gap: 6px; flex-shrink: 0; }
+  .mc-dashboard-mobile-switch button { flex: 1; min-height: 36px; border-radius: 12px; background: #eaf0e3; font-size: 12px; }
+  .mc-dashboard-mobile-switch button[aria-pressed="true"] { background: #17251d; color: #fff; }
+  .mc-dashboard-paged[data-workspace="setup"] .mc-dashboard-panes,
+  .mc-dashboard-paged[data-workspace="results"] .mc-dashboard-setup { display: none; }
+  .mc-dashboard-page .mc-result-quality { grid-template-columns: minmax(0,1fr); gap: 10px; }
+  .mc-dashboard-page .mc-result-quality .mc-section-card { padding: 12px 16px; }
+  .mc-dashboard-page .mc-result-quality .mc-section-heading { padding-bottom: 4px; }
+  .mc-dashboard-page .mc-result-quality .mc-section-card > div:not(.mc-section-heading) { padding-block: 6px; }
+  .mc-dashboard-page .mc-result-chart .section-label { font-size: 11px; }
+  .mc-dashboard-page .mc-result-chart select { max-width: 110px; }
+  .mc-dashboard-page .mc-fit-card { padding: 14px; gap: 8px; }
+
+}
+.mc-dashboard-page .mc-page-heading h1 { line-height: 1.2; }
+.mc-dashboard-page .mc-algorithm-content { flex: 0 0 auto; }
+.mc-dashboard-page [hidden] { display: none !important; }
+.mc-comparison { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 12px; }
+.mc-comparison-select,.mc-comparison-metric { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 12px; }
+.mc-comparison select { border: 1px solid #d7dacf; border-radius: 10px; padding: 7px 10px; background: #fff; }
+.mc-comparison-plots,.mc-comparison-plot { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.mc-comparison-plot .recharts-responsive-container { flex: 1; min-height: 0; }
+.mc-comparison-metric { display: none; }
+.mc-dendrogram { display: flex; flex: 1; min-height: 0; flex-direction: column; gap: 12px; }
+.mc-dendrogram > * { margin-top: 0; flex-shrink: 0; }
+.mc-dendrogram .mc-dendrogram-canvas { flex: 1; min-height: 0; }
+@media(max-width:1100px) {
+  .mc-comparison-metric { display: flex; margin-bottom: 12px; }
+  .mc-comparison-table [data-metric] { display: none; }
+  .mc-comparison-table[data-metric="silhouette"] [data-metric="silhouette"],
+  .mc-comparison-table[data-metric="davies_bouldin"] [data-metric="davies_bouldin"],
+  .mc-comparison-table[data-metric="calinski_harabasz"] [data-metric="calinski_harabasz"] { display: table-cell; }
+}
+.mc-dashboard-insights { display: flex; flex-direction: column; min-height: 0; gap: 12px; }
+.mc-dashboard-insights > :first-child { flex-shrink: 0; }
+.mc-insight-pages { position: relative; display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 12px; }
+.mc-insight-pages > label { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+.mc-insight-pages select { border: 1px solid #d7dacf; border-radius: 10px; padding: 7px; }
+.mc-insight-viewport { flex: 1; min-height: 0; }
+.mc-insight-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.7; margin: 0; }
+.mc-insight-probe { position: fixed; left: -10000px; top: 0; visibility: hidden; pointer-events: none; }
+@media(max-width:859px) {
+  .mc-dashboard-insights > :first-child { flex-wrap: wrap; }
+  .mc-dashboard-insights > .grid { grid-template-columns: 1fr; }
+}
+.mc-feature-score { display: flex; flex-direction: column; justify-content: center; gap: 6px; height: 46px; }
+.mc-feature-scores h2 { font-size: 18px; }
+
+@media(max-width:1200px) {
+  .mc-dashboard-page .mc-patient-table .input-field { min-height: 34px; width: 100%; flex: 1; min-width: 0; }
+  .mc-dashboard-page .mc-patient-table > div:first-child > div { width: 100%; }
+  .mc-dashboard-page .mc-patient-table .btn-secondary { min-height: 34px; padding-inline: 10px; }
+  .mc-dashboard-page .mc-patient-column { display: flex; justify-content: space-between; align-items: center; font-size: 12px; }
+  .mc-patient-column select { border: 1px solid #d7dacf; border-radius: 8px; padding: 5px; }
+  .mc-dashboard-page .mc-patient-table :where([data-column]:not([data-column="patient_id"]):not([data-column="risk_tier"]):not([data-column="_files"])) { display: none; }
+  .mc-dashboard-page .mc-patient-table[data-column="age"] [data-column="age"],
+  .mc-dashboard-page .mc-patient-table[data-column="bmi"] [data-column="bmi"],
+  .mc-dashboard-page .mc-patient-table[data-column="systolic_bp"] [data-column="systolic_bp"],
+  .mc-dashboard-page .mc-patient-table[data-column="glucose"] [data-column="glucose"],
+  .mc-dashboard-page .mc-patient-table[data-column="cluster_id"] [data-column="cluster_id"] { display: table-cell; }
+}
+/* Primary results stay in view; specialist tools live in one compact menu. */
+.mc-dashboard-page .mc-view-controls { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.mc-dashboard-page .mc-view-controls .mc-screen-view-tabs { display: flex; flex: 1; }
+.mc-dashboard-page .mc-dashboard-panes > .mc-screen-views > .mc-view-controls + .mc-screen-view-select { display: none; }
+.mc-dashboard-page .mc-view-more select,.mc-active-algorithm select { min-height: 40px; padding: 8px 12px; max-width: 160px; border: 1px solid #d7dacf; border-radius: 14px; background: #fff; font-size: 12px; color: #17221d; }
+.mc-active-algorithm { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #62675e; }
+.mc-data-notes summary { list-style: none; cursor: pointer; border: 1px solid #d7dacf; border-radius: 99px; padding: 10px 16px; font-size: 12px; color: #62675e; }
+.mc-data-notes summary::-webkit-details-marker { display: none; }
+.mc-data-notes > div { position: absolute; z-index: 30; top: 120px; right: 30px; width: min(360px,calc(100% - 36px)); padding: 18px; border: 1px solid #e3d9c8; border-radius: 18px; background: #faf3e8; box-shadow: 0 12px 30px #17221d12; font-size: 12px; line-height: 1.7; }
+.mc-data-notes p + p { margin-top: 8px; }
+@media(max-width:859px) {
+  .mc-dashboard-page .mc-view-controls { display: none; }
+  .mc-dashboard-page .mc-dashboard-panes > .mc-screen-views > .mc-view-controls + .mc-screen-view-select { display: block; }
+  .mc-data-notes > div { top: 135px; right: 18px; }
+}

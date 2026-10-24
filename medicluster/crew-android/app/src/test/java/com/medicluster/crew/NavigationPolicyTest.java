@@ -4,7 +4,7 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public class NavigationPolicyTest {
-    private static final String ORIGIN = "https://medicluster-dispatch-dix1.onrender.com";
+    private static final String ORIGIN = "http://localhost:5174";
     private final NavigationPolicy policy = new NavigationPolicy(ORIGIN);
 
     @Test public void opensOnlyLiveCrewRoutes() {

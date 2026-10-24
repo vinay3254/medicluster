@@ -63,6 +63,7 @@ app.use("/api/ai",      aiRoutes);
 app.use("/api/ml",      requireAuth, mlRoutes);
 app.use("/api/health",  healthRoutes);
 app.use("/api/settings", requireAuth, settingsRoutes);
+app.use("/api/patient-app", require("./routes/patientFeatureRoutes"));
 app.use("/api/patient-app", patientAppRoutes);
 
 app.get("/api/health", async (_req, res) => {

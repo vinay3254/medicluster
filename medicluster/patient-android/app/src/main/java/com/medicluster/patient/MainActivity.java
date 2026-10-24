@@ -32,6 +32,7 @@ import android.widget.Toast;
 public final class MainActivity extends Activity {
     private static final int PICK_PHOTO = 100;
     private static final int REQUEST_LOCATION = 101;
+    private static final int REQUEST_NOTIFICATIONS = 102;
     private final NavigationPolicy policy = new NavigationPolicy(BuildConfig.PATIENT_ORIGIN);
     private WebView web;
     private LinearLayout status;
@@ -92,7 +93,7 @@ public final class MainActivity extends Activity {
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
         web.setWebViewClient(new WebViewClient() {
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                return handleNavigation(request.getUrl(), request.isForMainFrame());
+                return handleNavigation(request.getUrl(), request.isForMainFrame(), request.hasGesture());
             }
             @Override public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
                 if (!policy.isPatientPage(url)) {
@@ -123,7 +124,15 @@ public final class MainActivity extends Activity {
                 photoCallback = callback;
                 Intent pick = new Intent(Intent.ACTION_GET_CONTENT);
                 pick.addCategory(Intent.CATEGORY_OPENABLE);
-                pick.setType("image/*");
+                // Only supported report/photo types; never trust an arbitrary MIME from the page.
+                java.util.Set<String> allowed=new java.util.LinkedHashSet<>();
+                for (String type:params.getAcceptTypes()) for (String part:type.split(",")) {
+                    String mime=part.trim().toLowerCase(java.util.Locale.ROOT);
+                    if (java.util.Arrays.asList("application/pdf","image/jpeg","image/png","image/webp","image/*").contains(mime)) allowed.add(mime);
+                }
+                if (allowed.isEmpty()) allowed.add("image/*");
+                pick.setType(allowed.size()==1?allowed.iterator().next():"*/*");
+                if (allowed.size()>1) pick.putExtra(Intent.EXTRA_MIME_TYPES,allowed.toArray(new String[0]));
                 try { startActivityForResult(Intent.createChooser(pick, "Choose a photo"), PICK_PHOTO); }
                 catch (ActivityNotFoundException e) {
                     photoCallback.onReceiveValue(null);
@@ -153,6 +162,10 @@ public final class MainActivity extends Activity {
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        if ("com.medicluster.patient.OPEN_REMINDERS".equals(intent.getAction())) {
+            lastPatientUrl=BuildConfig.PATIENT_ORIGIN+"/app";
+            web.loadUrl(lastPatientUrl);
+        }
         String googleReturnUrl = consumeGoogleReturn(intent);
         if (googleReturnUrl != null) {
             // Keep this WebView and its localStorage PKCE verifier when the browser returns.
@@ -169,8 +182,15 @@ public final class MainActivity extends Activity {
         return data == null ? null : policy.patientUrlFromGoogleReturn(data.toString());
     }
 
-    private boolean handleNavigation(Uri uri, boolean mainFrame) {
+    private boolean handleNavigation(Uri uri, boolean mainFrame, boolean userGesture) {
         String url = uri.toString();
+        if ("mediclusterpatient".equals(uri.getScheme())) {
+            if (mainFrame && policy.isPatientPage(web.getUrl())) {
+                if ("mediclusterpatient://reminder-sync".equals(url)) syncReminders();
+                if (userGesture && "mediclusterpatient://enable-reminders".equals(url)) enableReminders();
+            }
+            return true;
+        }
         if (policy.isPatientPage(url)) return false;
         if (!mainFrame) return true;
         if (policy.isGoogleAuthStart(url)) {
@@ -200,6 +220,45 @@ public final class MainActivity extends Activity {
         return true;
     }
 
+    private void publishReminderStatus(String error) {
+        if (web == null || !policy.isPatientPage(web.getUrl())) return;
+        String value=ReminderAlarms.status(this,error).toString();
+        web.evaluateJavascript("window.MediClusterNativeReminderStatus="+value+";window.dispatchEvent(new CustomEvent('medicluster:native-reminder-status',{detail:window.MediClusterNativeReminderStatus}));",null);
+    }
+
+    private void syncReminders() {
+        web.evaluateJavascript("(function(){try{var s=JSON.stringify(window.MediClusterReminderSchedule);return s&&s.length<=262144?s:null;}catch(e){return null;}})()", value -> {
+            if (!policy.isPatientPage(web.getUrl())) return;
+            try {
+                Object decoded=new org.json.JSONTokener(value).nextValue();
+                if (!(decoded instanceof String)) throw new IllegalArgumentException("Missing schedule");
+                ReminderStore.save(this,(String)decoded);
+                ReminderAlarms.reschedule(this);
+                publishReminderStatus(null);
+            } catch (Exception e) { publishReminderStatus("Could not save medicine reminders. Open medicines and try again."); }
+        });
+    }
+
+    private void enableReminders() {
+        if (Build.VERSION.SDK_INT>=33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED) {
+            android.content.SharedPreferences preferences=getSharedPreferences("medicine-reminders",0);
+            if (preferences.getBoolean("notificationsAsked",false)
+                    && !shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)) {
+                startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,getPackageName()));
+            } else {
+                preferences.edit().putBoolean("notificationsAsked",true).apply();
+                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},REQUEST_NOTIFICATIONS);
+            }
+        } else if (!ReminderAlarms.enabled(this)) {
+            startActivity(new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(android.provider.Settings.EXTRA_APP_PACKAGE,getPackageName()));
+        } else if (!ReminderAlarms.exact(this)) {
+            startActivity(new Intent(android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,Uri.parse("package:"+getPackageName())));
+        } else {
+            ReminderAlarms.reschedule(this);
+            publishReminderStatus(null);
+        }
+    }
+
     private boolean hasLocationPermission() {
         return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 || checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
@@ -215,6 +274,7 @@ public final class MainActivity extends Activity {
 
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(requestCode, permissions, results);
+        if (requestCode == REQUEST_NOTIFICATIONS) { ReminderAlarms.reschedule(this); publishReminderStatus(null); }
         if (requestCode == REQUEST_LOCATION && locationCallback != null) {
             locationCallback.invoke(locationOrigin, hasLocationPermission(), false);
             locationCallback = null;
@@ -243,6 +303,8 @@ public final class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        ReminderAlarms.reschedule(this);
+        publishReminderStatus(null);
         if (web != null) {
             // Let the page recover if the browser was dismissed without a Google callback.
             web.evaluateJavascript("window.dispatchEvent(new Event('medicluster:patient-resumed'));", null);

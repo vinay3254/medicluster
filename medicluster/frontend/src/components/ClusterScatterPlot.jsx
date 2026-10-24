@@ -72,7 +72,7 @@ export default function ClusterScatterPlot({ patients = [], featureNames = [], o
       {isEmpty ? (
         <EmptyState />
       ) : (
-        <ResponsiveContainer width="100%" height="100%" minHeight={380}>
+        <ResponsiveContainer width="100%" height="100%" minHeight={0} className="mc-scatter-canvas">
           <ScatterChart margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <CartesianGrid stroke="#d7dacf" strokeDasharray="3 3" />
             <XAxis
@@ -100,6 +100,7 @@ export default function ClusterScatterPlot({ patients = [], featureNames = [], o
                 name={tier}
                 data={data}
                 fill={RISK_COLORS[tier] ?? "#888"}
+                isAnimationActive={false}
                 fillOpacity={tier === "Noise" ? 0.4 : 0.85}
                 shape={tier === "Noise" ? "cross" : "circle"}
                 onClick={(point) => onPatientClick?.(point)}

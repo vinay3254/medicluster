@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
-import { T, MONO } from '../theme/tokens';
+import { T, MONO } from '../theme/dispatchTokens';
 
 const STANDBY = ['AVAILABLE'];
 const OFFLINE = ['OFFLINE', 'MAINTENANCE', 'OUT_OF_SERVICE'];
@@ -18,8 +18,8 @@ export default function UnitsPanel({ ambulances = [], onSelect }) {
   const active = ambulances.filter(a => !STANDBY.includes(a.status) && !OFFLINE.includes(a.status)).length;
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', pb: '8px', borderBottom: `1px solid ${T.tx}` }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', flexShrink:0, p:'18px', borderRadius:'24px', background:T.panel, border:`1px solid ${T.bd}` }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', pb: '8px', borderBottom: `1px solid ${T.bd}` }}>
         <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>Units</Typography>
         <Typography sx={{ fontFamily: MONO, fontSize: 11, color: T.tx3, letterSpacing: '0.04em' }}>
           {standby} STANDBY · {active} ACTIVE
@@ -33,7 +33,7 @@ export default function UnitsPanel({ ambulances = [], onSelect }) {
           <Box key={a.id} component="button" type="button" onClick={() => onSelect?.(a)}
             sx={{
               display: 'grid', gridTemplateColumns: '8px minmax(0,1fr) auto', gap: '12px', alignItems: 'center',
-              width: '100%', p: '11px 0', border: 0, borderBottom: `1px solid ${T.bd}`, background: 'transparent',
+              width: '100%', p: '11px 6px', border: 0, borderBottom: `1px solid ${T.bd}`, background: 'transparent',
               color: T.tx, font: 'inherit', textAlign: 'left', cursor: 'pointer',
               '&:hover': { background: T.sf }, '&:focus-visible': { outline: `2px solid ${T.ac}`, outlineOffset: -2 },
             }}>

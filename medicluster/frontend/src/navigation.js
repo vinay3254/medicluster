@@ -2,7 +2,7 @@
 export const DISPATCH_URL = import.meta.env.VITE_DISPATCH_URL || (
   import.meta.env.DEV
     ? "http://localhost:5174"
-    : "https://medicluster-dispatch-dix1.onrender.com"
+    : "http://localhost:5175"
 );
 
 // Clinician app sections, in sidebar order. Numbers ("01", "02", …) follow this order.

@@ -1,9 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Routes, Route, NavLink, Navigate, useLocation } from "react-router-dom";
-import { House, MessageCircle, HeartPulse } from "lucide-react";
+import { House, MessageCircle, HeartPulse, CalendarDays, FileText } from "lucide-react";
 import {
   listReminders, markDoseTaken, getPatientProfile, updatePatientProfile, listReadings,
-  getPatientToken, setPatientToken,
+  getPatientToken, setPatientToken, logReading,
 } from "../api/apiClient";
 import { dateKey, slotsOn, toMinutes, nowMinutes } from "../data/schedule";
 import TodayScreen from "./screens/TodayScreen";
@@ -13,6 +13,11 @@ import LogReadingScreen from "./screens/LogReadingScreen";
 import VisitsScreen from "./screens/VisitsScreen";
 import EmergencyScreen from "./screens/EmergencyScreen";
 import ProfileScreen from "./screens/ProfileScreen";
+import ReportsScreen from "./screens/ReportsScreen";
+import { savePatientSnapshot, readPatientSnapshot, clearPatientOffline, enqueuePatientMutation, flushPatientMutations, registerPatientServiceWorker } from "./offline";
+import { usePatientOfflineStatus } from "./offlineStatus";
+import { syncNativeReminders, clearNativeReminders, requestNativeReminderPermission, getNativeReminderStatus, subscribeNativeReminderStatus } from "./nativeReminders";
+import "./patient-theme.css";
 import ReminderAlert from "./ReminderAlert";
 import LoginScreen from "./screens/LoginScreen";
 import "../auth/auth-artwork.css";
@@ -65,29 +70,46 @@ export default function PatientApp() {
   const [profile, setProfile] = useState(null);
   const [reminders, setReminders] = useState([]);
   const [readings, setReadings] = useState([]);
+  const offlineStatus = usePatientOfflineStatus(patientId);
+  const [notificationStatus, setNotificationStatus] = useState(getNativeReminderStatus);
+  const identity = useRef(patientId);
+  identity.current = patientId;
+  const loadedFor = useRef('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [snoozes, setSnoozes] = useState(() => readStorage(SNOOZE_KEY, {}));
   const now = useNow();
 
   // Setting "" signs the patient out.
-  const setPatientId = useCallback((id) => {
+  const setPatientId = useCallback((id, { preserveOffline = false } = {}) => {
+    const previous = readStorage(PATIENT_KEY, '');
+    if (!id || previous !== id) {
+      if (previous && !preserveOffline) clearPatientOffline(previous).catch(() => {});
+      clearNativeReminders();
+      setProfile(null); setReminders([]); setReadings([]); setSnoozes({});
+      writeStorage(SNOOZE_KEY, {});
+      loadedFor.current = '';
+    }
+    identity.current = id;
     if (!id) setPatientToken(null);
     writeStorage(PATIENT_KEY, id);
     setPatientIdState(id);
   }, []);
 
   const signIn = useCallback(({ token, patientId: id }) => {
+    const previous = readStorage(PATIENT_KEY, '');
+    if (previous && previous !== id) clearPatientOffline(previous).catch(() => {});
     setPatientToken(token);
-    writeStorage(PATIENT_KEY, id);
-    setPatientIdState(id);
-  }, []);
+    setPatientId(id);
+  }, [setPatientId]);
 
   useEffect(() => {
-    const onSignedOut = () => setPatientId("");
-    window.addEventListener("medicluster:patient-signed-out", onSignedOut);
-    return () => window.removeEventListener("medicluster:patient-signed-out", onSignedOut);
+    const onSignedOut = () => setPatientId('', { preserveOffline: true });
+    window.addEventListener('medicluster:patient-signed-out', onSignedOut);
+    return () => window.removeEventListener('medicluster:patient-signed-out', onSignedOut);
   }, [setPatientId]);
+  useEffect(() => { registerPatientServiceWorker().catch(() => {}); return subscribeNativeReminderStatus(setNotificationStatus); }, []);
+  useEffect(() => { if (patientId && loadedFor.current === patientId) syncNativeReminders(patientId, reminders); }, [patientId, reminders]);
 
   const refreshReminders = useCallback(async () => {
     if (!patientId) return;
@@ -99,25 +121,65 @@ export default function PatientApp() {
     setReadings(await listReadings(patientId));
   }, [patientId]);
 
+  const refreshPatient = useCallback(async () => {
+    if (!patientId) return;
+    const [p, rems, reads] = await Promise.all([getPatientProfile(patientId), listReminders(patientId), listReadings(patientId)]);
+    if (identity.current !== patientId) return;
+    loadedFor.current = patientId;
+    setProfile(p); setReminders(rems); setReadings(reads); setError('');
+    await savePatientSnapshot(patientId, { profile: p, reminders: rems, readings: reads }).catch(() => {});
+  }, [patientId]);
+
+  const syncPending = useCallback(async () => {
+    if (!patientId || navigator.onLine === false) return;
+    const result = await flushPatientMutations(patientId, {
+      reading: (payload, { idempotencyKey }) => logReading(patientId, payload, idempotencyKey),
+      dose: (payload, { idempotencyKey }) => markDoseTaken(payload.reminderId, payload.date, payload.time, idempotencyKey),
+    });
+    if (identity.current !== patientId) return;
+    if (result.error && !result.blocked) setError(result.error);
+    if (!result.blocked) await refreshPatient();
+  }, [patientId, refreshPatient]);
+
   useEffect(() => {
-    setProfile(null);
-    setReminders([]);
-    setReadings([]);
+    setProfile(null); setReminders([]); setReadings([]);
     if (!patientId) return;
     let cancelled = false;
     setLoading(true);
-    setError("");
-    Promise.all([getPatientProfile(patientId), listReminders(patientId), listReadings(patientId)])
-      .then(([p, rems, reads]) => {
-        if (cancelled) return;
-        setProfile(p);
-        setReminders(rems);
-        setReadings(reads);
-      })
-      .catch((err) => !cancelled && setError(apiError(err)))
-      .finally(() => !cancelled && setLoading(false));
-    return () => { cancelled = true; };
-  }, [patientId]);
+    readPatientSnapshot(patientId).then(snapshot => {
+      if (snapshot && !cancelled && loadedFor.current !== patientId) {
+        loadedFor.current = patientId;
+        setProfile(snapshot.profile); setReminders(snapshot.reminders || []); setReadings(snapshot.readings || []);
+      }
+    }).catch(() => {});
+    if (navigator.onLine !== false) syncPending().catch(err => !cancelled && setError(apiError(err))).finally(() => !cancelled && setLoading(false));
+    else setLoading(false);
+    const online = () => syncPending().catch(err => !cancelled && setError(apiError(err)));
+    window.addEventListener('online', online);
+    return () => { cancelled = true; window.removeEventListener('online', online); };
+  }, [patientId, syncPending]);
+
+  const cacheSection = useCallback(async (key, data) => { if (patientId) await savePatientSnapshot(patientId, { sections: { [key]: data } }).catch(() => {}); }, [patientId]);
+  const loadSection = useCallback(async (key, loader) => {
+    try {
+      if (navigator.onLine === false) throw new Error('offline');
+      const data = await loader();
+      if (identity.current !== patientId) return [];
+      await cacheSection(key, data); return data;
+    } catch (err) {
+      if (err.response) throw err;
+      const snapshot = await readPatientSnapshot(patientId).catch(() => null);
+      if (snapshot?.sections?.[key]) return snapshot.sections[key];
+      throw new Error(navigator.onLine === false ? 'No saved data for this screen. Connect once to load it.' : apiError(err));
+    }
+  }, [patientId, cacheSection]);
+  const clearOffline = useCallback(async () => { await clearPatientOffline(patientId); }, [patientId]);
+  const saveReading = useCallback(async reading => {
+    const payload = { ...reading, takenAt: new Date().toISOString() };
+    const queued = await enqueuePatientMutation(patientId, 'reading', payload);
+    if (navigator.onLine !== false) await syncPending();
+    return queued;
+  }, [patientId, syncPending]);
 
   const saveProfile = useCallback(async (patch) => {
     const saved = await updatePatientProfile(patientId, patch);
@@ -125,14 +187,17 @@ export default function PatientApp() {
     return saved;
   }, [patientId]);
 
-  const takeSlot = useCallback(async (slot) => {
-    const pending = slot.reminders.filter(
-      (r) => !(r.doseLog ?? []).some((l) => l.date === slot.date && l.time === slot.time)
-    );
-    const updated = await Promise.all(pending.map((r) => markDoseTaken(r._id, slot.date, slot.time)));
-    const byId = new Map(updated.map((r) => [r._id, r]));
-    setReminders((prev) => prev.map((r) => byId.get(r._id) ?? r));
-  }, []);
+  const takeSlot = useCallback(async slot => {
+    const pending = slot.reminders.filter(r => !(r.doseLog ?? []).some(l => l.date === slot.date && l.time === slot.time));
+    if (navigator.onLine === false) {
+      for (const r of pending) await enqueuePatientMutation(patientId, 'dose', { reminderId: r._id, date: slot.date, time: slot.time });
+      return;
+    }
+    const updated = await Promise.all(pending.map(r => markDoseTaken(r._id, slot.date, slot.time)));
+    if (identity.current !== patientId) return;
+    const byId = new Map(updated.map(r => [r._id, r]));
+    setReminders(prev => prev.map(r => byId.get(r._id) ?? r));
+  }, [patientId]);
 
   const snoozeSlot = useCallback((slot) => {
     setSnoozes((prev) => {
@@ -151,12 +216,13 @@ export default function PatientApp() {
     patientId, setPatientId, profile, saveProfile,
     reminders, refreshReminders, readings, refreshReadings,
     todaySlots, now, snoozes, takeSlot, snoozeSlot,
-    loading, error, setError, apiError,
+    loading, error, setError, apiError, offlineStatus, notificationStatus, enableReminders: requestNativeReminderPermission, syncPending, clearOffline, loadSection, cacheSection, saveReading,
   };
 
   return (
     <PatientContext.Provider value={value}>
       <PhoneFrame signedIn={Boolean(patientId)}>
+        {patientId && (offlineStatus.offline || offlineStatus.pending || offlineStatus.failed) ? <div className="pt-offline-strip" role="status">{offlineStatus.offline ? 'Offline · saved data' : 'Syncing your care'}{offlineStatus.savedAt && offlineStatus.offline ? ` · ${new Date(offlineStatus.savedAt).toLocaleDateString()}` : ''}{offlineStatus.pending ? ` · ${offlineStatus.pending} pending` : ''}{offlineStatus.failed ? ` · ${offlineStatus.failed} need review` : ''}</div> : null}
         {patientId ? <AppRoutes /> : <LoginScreen onSignedIn={signIn} />}
         {patientId && <DoseAlerts />}
       </PhoneFrame>
@@ -172,6 +238,7 @@ function AppRoutes() {
       <Route path="health" element={<HealthScreen />} />
       <Route path="health/log" element={<LogReadingScreen />} />
       <Route path="visits" element={<VisitsScreen />} />
+      <Route path="reports" element={<ReportsScreen />} />
       <Route path="emergency" element={<EmergencyScreen />} />
       <Route path="profile" element={<ProfileScreen />} />
       <Route path="*" element={<Navigate to="/app" replace />} />
@@ -208,8 +275,10 @@ function StatusBar() {
 
 const TABS = [
   { to: "/app", label: "Today", end: true, icon: House },
-  { to: "/app/cliniq", label: "Ask CliniQ", icon: MessageCircle },
+  { to: "/app/visits", label: "Care", icon: CalendarDays },
   { to: "/app/health", label: "My health", icon: HeartPulse },
+  { to: "/app/reports", label: "Reports", icon: FileText },
+  { to: "/app/cliniq", label: "CliniQ", icon: MessageCircle },
 ];
 
 export function TabBar() {

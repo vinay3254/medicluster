@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import PatientMediaModal from "./PatientMediaModal";
+import { usePageCapacity } from "./viewport-ui";
 
 const TIER_COLORS = {
   Low:      "badge-low",
@@ -9,9 +10,9 @@ const TIER_COLORS = {
   Noise:    "badge-noise",
 };
 
-const PAGE_SIZE = 20;
-
 export default function PatientTable({ patients = [] }) {
+  const [host, pageSize] = usePageCapacity({ rowHeight: 58, reserved: 220, max: 20 });
+  const [mobileColumn, setMobileColumn] = useState("age");
   const [search, setSearch]     = useState("");
   const [tierFilter, setTier]   = useState("All");
   const [sortKey, setSortKey]   = useState("patient_id");
@@ -38,8 +39,9 @@ export default function PatientTable({ patients = [] }) {
     return rows;
   }, [patients, search, tierFilter, sortKey, sortDir]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageRows   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageRows = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const sort = (key) => {
     if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -74,7 +76,7 @@ export default function PatientTable({ patients = [] }) {
   ];
 
   return (
-    <div className="panel space-y-3 fade-in">
+    <div ref={host} className="mc-patient-table panel space-y-3 fade-in" data-column={mobileColumn}>
       <div className="flex flex-wrap gap-2 items-center justify-between">
         <p className="section-label mb-0">Patient Table ({filtered.length} records)</p>
         <div className="flex gap-2 flex-wrap">
@@ -98,13 +100,14 @@ export default function PatientTable({ patients = [] }) {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-[3px] border border-navy-700">
+      <label className="mc-patient-column">Patient metric<select value={mobileColumn} onChange={event => setMobileColumn(event.target.value)}>{columns.filter(col => !["patient_id", "risk_tier", "_files"].includes(col.key)).map(col => <option key={col.key} value={col.key}>{col.label}</option>)}</select></label>
+      <div className="mc-patient-rows overflow-x-auto rounded-[3px] border border-navy-700">
         <table className="w-full text-xs text-left">
           <thead className="bg-navy-800 text-slate-500 uppercase tracking-wide">
             <tr>
               {columns.map((col) => (
                 <th
-                  key={col.key}
+                  key={col.key} data-column={col.key}
                   onClick={() => !col.noSort && sort(col.key)}
                   className={`px-3 py-2.5 select-none whitespace-nowrap ${col.noSort ? "" : "cursor-pointer hover:text-blue-700"}`}
                 >
@@ -130,16 +133,16 @@ export default function PatientTable({ patients = [] }) {
                   className="border-t border-navy-700 hover:bg-navy-700/40 transition-colors"
                 >
                   <td className="px-3 py-2 font-mono text-blue-700">{p.patient_id}</td>
-                  <td className="px-3 py-2 font-mono">{p.age ?? "—"}</td>
-                  <td className="px-3 py-2 font-mono">{fmt(p.bmi)}</td>
-                  <td className="px-3 py-2 font-mono">{p.systolic_bp ?? "—"}</td>
-                  <td className="px-3 py-2 font-mono">{fmt(p.glucose)}</td>
+                  <td data-column="age" className="px-3 py-2 font-mono">{p.age ?? "—"}</td>
+                  <td data-column="bmi" className="px-3 py-2 font-mono">{fmt(p.bmi)}</td>
+                  <td data-column="systolic_bp" className="px-3 py-2 font-mono">{p.systolic_bp ?? "—"}</td>
+                  <td data-column="glucose" className="px-3 py-2 font-mono">{fmt(p.glucose)}</td>
                   <td className="px-3 py-2">
                     <span className={TIER_COLORS[p.risk_tier] ?? "badge-noise"}>
                       {p.risk_tier ?? "?"}
                     </span>
                   </td>
-                  <td className="px-3 py-2 font-mono text-slate-500">{p.cluster_id}</td>
+                  <td data-column="cluster_id" className="px-3 py-2 font-mono text-slate-500">{p.cluster_id}</td>
                   <td className="px-3 py-2">
                     <button
                       onClick={() => setMediaPatient(p.patient_id)}
@@ -158,18 +161,18 @@ export default function PatientTable({ patients = [] }) {
 
       {/* Pagination */}
       <div className="flex items-center justify-between text-xs text-slate-500">
-        <span>Page {page} of {totalPages}</span>
+        <span>Page {currentPage} of {totalPages}</span>
         <div className="flex gap-1">
           <button
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
+            onClick={() => setPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage === 1}
             className="btn-secondary text-xs py-1 px-2 disabled:opacity-30"
           >
             ← Prev
           </button>
           <button
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={page === totalPages}
+            onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage === totalPages}
             className="btn-secondary text-xs py-1 px-2 disabled:opacity-30"
           >
             Next →

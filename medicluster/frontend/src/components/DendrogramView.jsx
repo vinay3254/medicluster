@@ -10,11 +10,16 @@ export default function DendrogramView({ linkageMatrix = [], patients = [] }) {
 
   useEffect(() => {
     if (isEmpty) return;
-    drawDendrogram(svgRef.current, linkageMatrix, patients, cutHeight);
+    const svg = svgRef.current;
+    const draw = () => drawDendrogram(svg, linkageMatrix, patients, cutHeight);
+    const observer = new ResizeObserver(draw);
+    observer.observe(svg.parentElement);
+    draw();
+    return () => observer.disconnect();
   }, [linkageMatrix, patients, cutHeight, isEmpty]);
 
   return (
-    <div className="panel space-y-3 fade-in">
+    <div className="mc-dendrogram panel space-y-3 fade-in">
       <p className="section-label">Dendrogram (Hierarchical Clustering)</p>
 
       {isEmpty ? (
@@ -34,7 +39,7 @@ export default function DendrogramView({ linkageMatrix = [], patients = [] }) {
               className="w-full accent-blue-600"
             />
           </div>
-          <div className="overflow-x-auto">
+          <div className="mc-dendrogram-canvas">
             <svg ref={svgRef} className="w-full" />
           </div>
         </>
@@ -57,16 +62,17 @@ function drawDendrogram(svgEl, linkageMatrix, patients, cutPct) {
   const cutHeight = (cutPct / 100) * maxHeight;
 
   const margin = { top: 20, right: 20, bottom: 40, left: 50 };
-  const width  = Math.max(600, n * 8);
-  const height = 320;
+  const width = Math.max(240, svgEl.parentElement.clientWidth);
+  const height = Math.max(140, svgEl.parentElement.clientHeight);
   const innerW = width  - margin.left - margin.right;
   const innerH = height - margin.top  - margin.bottom;
 
   d3.select(svgEl).selectAll("*").remove();
 
   const svg = d3.select(svgEl)
-    .attr("width", width)
-    .attr("height", height)
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("width", "100%")
+    .attr("height", "100%")
     .append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 

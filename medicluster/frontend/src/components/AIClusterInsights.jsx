@@ -1,12 +1,6 @@
 import { useMemo, useState } from "react";
+import { DashboardInsightPages } from "./DashboardInsightPages";
 import { generateClusterInsights } from "../api/apiClient";
-
-const PRIORITY_CLASS = {
-  Immediate: "bg-surface text-red-700 border-red-200",
-  High: "bg-surface text-orange-700 border-orange-200",
-  Routine: "bg-sunken text-blue-700 border-line-strong",
-  Monitor: "bg-slate-50 text-slate-600 border-line",
-};
 
 function riskDistribution(result) {
   return result?.riskDistribution ?? result?.risk_distribution ?? {};
@@ -80,7 +74,7 @@ export default function AIClusterInsights({ result }) {
   }
 
   return (
-    <section className="panel fade-in">
+    <section className="mc-dashboard-insights panel fade-in">
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
@@ -91,9 +85,6 @@ export default function AIClusterInsights({ result }) {
             <p className="section-label mb-0">AI Cohort Copilot</p>
             {insights?.source && <SourcePill source={insights.source} />}
           </div>
-          {insights?.headline && (
-            <h2 className="text-base font-semibold text-slate-900 mt-2">{insights.headline}</h2>
-          )}
         </div>
         <button
           onClick={handleGenerate}
@@ -129,74 +120,8 @@ export default function AIClusterInsights({ result }) {
         </div>
       )}
 
-      {insights && (
-        <div className="mt-4 space-y-4">
-          {insights.cohort_summary && (
-            <p className="text-sm text-slate-600 leading-relaxed">{insights.cohort_summary}</p>
-          )}
+      {insights && <DashboardInsightPages insights={insights} />}
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Risk Drivers</p>
-              {(insights.risk_drivers ?? []).length === 0 ? (
-                <p className="text-xs text-slate-400">No dominant drivers returned.</p>
-              ) : insights.risk_drivers.map((driver) => (
-                <div key={`${driver.feature}-${driver.signal}`} className="rounded-[3px] border border-line bg-slate-50 p-3">
-                  <p className="text-xs font-mono font-semibold text-slate-800">{driver.feature}</p>
-                  <p className="text-xs text-blue-700 mt-1">{driver.signal}</p>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">{driver.rationale}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Care Actions</p>
-              {(insights.cluster_actions ?? []).map((action) => (
-                <div key={`${action.cluster_id}-${action.action}`} className="rounded-[3px] border border-line bg-surface p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-mono text-slate-500">Cluster {action.cluster_id ?? "-"}</span>
-                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-sm border ${PRIORITY_CLASS[action.priority] ?? PRIORITY_CLASS.Monitor}`}>
-                      {action.priority}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-700 mt-2 leading-relaxed">{action.action}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Watchlist</p>
-              {(insights.patient_watchlist ?? []).length === 0 ? (
-                <p className="text-xs text-slate-400">No high-acuity patients were returned.</p>
-              ) : insights.patient_watchlist.map((patient) => (
-                <div key={`${patient.patient_id}-${patient.reason}`} className="rounded-[3px] border border-line bg-slate-50 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-mono font-semibold text-slate-800">{patient.patient_id}</span>
-                    <span className="text-[11px] font-semibold text-red-700 bg-surface border border-red-100 rounded-sm px-2 py-0.5">
-                      {patient.risk_tier}
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1 leading-relaxed">{patient.reason}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {(insights.care_pathways ?? []).length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {insights.care_pathways.map((pathway) => (
-                <span key={pathway} className="text-xs font-semibold text-blue-700 bg-sunken border border-line-strong rounded-sm px-2.5 py-1">
-                  {pathway}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {insights.safety_note && (
-            <p className="text-xs text-slate-400 border-t border-line pt-3">{insights.safety_note}</p>
-          )}
-        </div>
-      )}
     </section>
   );
 }

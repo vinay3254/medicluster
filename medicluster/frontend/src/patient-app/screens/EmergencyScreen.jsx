@@ -1,182 +1,38 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { dispatchEmergency } from "../../api/apiClient";
-import { fetchNearbyHospitals } from "../../api/nearbyHospitals";
-import { usePatient } from "../PatientApp";
-import { Body, ListHeader, TopBar } from "../ui";
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { usePatient, TabBar } from '../PatientApp';
+import { Body, ErrorNote } from '../ui';
+import { PatientHeading, PatientViews, PatientList } from '../PatientComponents';
+import { getEmergencies, getEmergency, requestEmergency } from '../featuresApi';
+import { fetchNearbyHospitals } from '../../api/nearbyHospitals';
+import SosButton from '../SosButton';
 
-const HOLD_MS = 3000;
-const AMBULANCE_NUMBER = "108";
-
-function getPosition() {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve(null);
-    navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude }),
-      () => resolve(null),
-      { timeout: 6000, maximumAge: 60_000 }
-    );
-  });
+const LABELS = { PENDING:'Waiting for dispatch',ASSIGNED:'Ambulance assigned',EN_ROUTE_TO_SCENE:'Ambulance is on the way',ON_SCENE:'Crew has arrived',TRANSPORTING_TO_HOSPITAL:'On the way to hospital',ARRIVED_AT_HOSPITAL:'Arrived at hospital',RESOLVED:'Response completed',CANCELLED:'Request cancelled' };
+const position = () => new Promise(resolve => navigator.geolocation ? navigator.geolocation.getCurrentPosition(p => resolve({ latitude:p.coords.latitude,longitude:p.coords.longitude }),()=>resolve(null),{timeout:10000}) : resolve(null));
+const coordinate = point => Number.isFinite(point?.latitude) && Number.isFinite(point?.longitude) ? [point.latitude,point.longitude] : null;
+function AmbulanceMap({ emergency }) {
+  const host=useRef(null),map=useRef(null);
+  useEffect(()=>{map.current=L.map(host.current,{zoomControl:false}).setView(coordinate(emergency.ambulance)||coordinate(emergency.location)||[20.59,78.96],13);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:19}).addTo(map.current);L.control.zoom({position:'bottomright'}).addTo(map.current);const observer=new ResizeObserver(()=>map.current?.invalidateSize());observer.observe(host.current);return()=>{observer.disconnect();map.current?.remove();map.current=null;};},[]);
+  useEffect(()=>{const group=L.layerGroup().addTo(map.current), points=[];for(const [point,label,kind]of [[emergency.location,'Your location','origin'],[emergency.ambulance,emergency.ambulance?.callSign||'Ambulance','ambulance'],[emergency.hospital,emergency.hospital?.name||'Hospital','hospital']]){const coords=coordinate(point);if(!coords)continue;points.push(coords);const title=document.createElement('span');title.textContent=label;L.marker(coords,{icon:L.divIcon({className:`pt-tracking-pin ${kind}`,html:'<span>+</span>',iconSize:[26,26],iconAnchor:[13,13]}),title:label}).bindTooltip(title).addTo(group);}if(points.length)map.current.fitBounds(L.latLngBounds(points),{padding:[25,25],maxZoom:16});return()=>group.remove();},[emergency]);
+  return <div ref={host} className="pt-map" aria-label="Ambulance and incident location map"/>;
 }
-
-function SosButton({ onTrigger, disabled }) {
-  const [progress, setProgress] = useState(0);
-  const start = useRef(null);
-  const frame = useRef(null);
-
-  const stop = () => {
-    cancelAnimationFrame(frame.current);
-    start.current = null;
-    setProgress(0);
-  };
-
-  const begin = () => {
-    if (disabled || start.current) return;
-    start.current = performance.now();
-    const tick = (t) => {
-      const p = Math.min((t - start.current) / HOLD_MS, 1);
-      setProgress(p);
-      if (p < 1) frame.current = requestAnimationFrame(tick);
-      else { stop(); onTrigger(); }
-    };
-    frame.current = requestAnimationFrame(tick);
-  };
-
-  useEffect(() => () => cancelAnimationFrame(frame.current), []);
-
-  const holdKey = (e) => (e.key === " " || e.key === "Enter") && !e.repeat;
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onPointerDown={begin}
-      onPointerUp={stop}
-      onPointerLeave={stop}
-      onPointerCancel={stop}
-      onKeyDown={(e) => { if (holdKey(e)) { e.preventDefault(); begin(); } }}
-      onKeyUp={(e) => { if (e.key === " " || e.key === "Enter") stop(); }}
-      onContextMenu={(e) => e.preventDefault()}
-      aria-label="SOS. Press and hold for 3 seconds to call an ambulance"
-      className="relative w-[200px] h-[200px] rounded-full bg-red-500 text-white flex flex-col items-center justify-center gap-1 shadow-[0_0_0_14px_#f1d9d6] select-none touch-none disabled:opacity-60"
-      style={{ WebkitTouchCallout: "none" }}
-    >
-      <svg className="absolute -inset-[14px] w-[228px] h-[228px] -rotate-90 pointer-events-none" viewBox="0 0 228 228" aria-hidden="true">
-        <circle cx="114" cy="114" r="107" fill="none" stroke="#a82f2a" strokeWidth="14"
-          strokeDasharray={2 * Math.PI * 107} strokeDashoffset={(1 - progress) * 2 * Math.PI * 107} />
-      </svg>
-      <span className="font-serif text-[40px] leading-none">SOS</span>
-      <span className="text-[13px]">{progress > 0 ? "Keep holding…" : "Hold for 3 seconds"}</span>
-    </button>
-  );
-}
-
 export default function EmergencyScreen() {
-  const { patientId, profile } = usePatient();
-  const [hospitals, setHospitals] = useState(null); // null = loading
-  const [hospitalError, setHospitalError] = useState("");
-  const [status, setStatus] = useState("");
-  const [calling, setCalling] = useState(false);
-  const contact = profile?.emergencyContact;
-
-  useEffect(() => {
-    let cancelled = false;
-    getPosition().then(async (pos) => {
-      if (!pos) {
-        if (!cancelled) { setHospitals([]); setHospitalError("Turn on location to see the nearest hospitals."); }
-        return;
-      }
-      try {
-        const list = await fetchNearbyHospitals(pos, 5);
-        if (!cancelled) setHospitals(list.filter((h) => h.isHospital !== false).slice(0, 3));
-      } catch {
-        if (!cancelled) { setHospitals([]); setHospitalError("Couldn't load nearby hospitals right now."); }
-      }
-    });
-    return () => { cancelled = true; };
-  }, []);
-
-  const triggerSos = async () => {
-    setCalling(true);
-    navigator.vibrate?.(200);
-    setStatus(`Calling ${AMBULANCE_NUMBER}…`);
-    // Start the phone call first; alerting dispatch must never delay it.
-    window.location.href = `tel:${AMBULANCE_NUMBER}`;
-    const pos = await getPosition();
-    try {
-      await dispatchEmergency({
-        caller_location: pos ? `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}` : "Unknown — patient app SOS",
-        reported_condition: `Patient SOS from MediCluster app: ${profile?.name || "patient"} (ID ${patientId})`,
-        severity_score: 8,
-      });
-      setStatus(`Calling ${AMBULANCE_NUMBER}. Dispatch has your ${pos ? "location and " : ""}details.`);
-    } catch {
-      setStatus(`Calling ${AMBULANCE_NUMBER}. Couldn't alert dispatch — tell the operator where you are.`);
-    } finally {
-      setCalling(false);
-    }
-  };
-
-  return (
-    <>
-      <TopBar back="/app" title="Emergency" />
-      <Body className="p-[22px] flex flex-col gap-[22px]">
-        <div className="flex flex-col items-center gap-3.5 pt-5 pb-1">
-          <SosButton onTrigger={triggerSos} disabled={calling} />
-          <span className="text-sm text-slate-600 text-center leading-normal max-w-[280px]" aria-live="assertive">
-            {status || `Calls an ambulance (${AMBULANCE_NUMBER}) and shares your location and details with dispatch.`}
-          </span>
-        </div>
-
-        <div className="flex flex-col">
-          <ListHeader title="Nearest hospitals" meta="NEAR YOU" />
-          {hospitals === null && <span className="py-3 text-sm text-slate-500">Finding hospitals…</span>}
-          {hospitalError && <span className="py-3 text-sm text-slate-500">{hospitalError}</span>}
-          {hospitals?.length === 0 && !hospitalError && (
-            <span className="py-3 text-sm text-slate-500">No hospitals found within 5 km.</span>
-          )}
-          {hospitals?.map((h) => (
-            <div key={h.place_id} className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-0.5 items-center py-3 border-b border-line">
-              <span className="text-sm font-medium">{h.name}</span>
-              <span className="font-mono text-[13px]">{h.distKm.toFixed(1)} km</span>
-              <span className="text-xs text-slate-500">
-                {[h.emergency && "24h emergency", h.address].filter(Boolean).join(" · ") || "Hospital"}
-              </span>
-              {h.phone ? (
-                <a href={`tel:${h.phone.split(/[;,]/)[0].replace(/\s/g, "")}`} className="text-[13px] text-blue-600 underline">Call</a>
-              ) : (
-                <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${h.lat},${h.lng}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[13px] text-blue-600 underline"
-                >
-                  Directions
-                </a>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="flex justify-between items-center gap-3 p-3.5 border border-line-strong rounded">
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-sm font-medium">Emergency contact</span>
-            <span className="text-xs text-slate-500 truncate">
-              {contact?.name
-                ? `${contact.name}${contact.relation ? ` (${contact.relation})` : ""}${contact.phone ? ` · ${contact.phone}` : ""}`
-                : "Not set yet"}
-            </span>
-          </div>
-          {contact?.phone ? (
-            <a href={`tel:${contact.phone.replace(/\s/g, "")}`} className="h-10 px-3.5 grid place-items-center bg-ink text-paper rounded text-[13px] shrink-0">
-              Call
-            </a>
-          ) : (
-            <Link to="/app/profile" className="h-10 px-3.5 grid place-items-center border border-ink rounded text-[13px] shrink-0">
-              Add
-            </Link>
-          )}
-        </div>
-      </Body>
-    </>
-  );
+  const {patientId,profile,offlineStatus,loadSection,cacheSection,apiError}=usePatient();
+  const [view,setView]=useState('help'),[items,setItems]=useState([]),[selected,setSelected]=useState(''),[tracked,setTracked]=useState(null),[hospitals,setHospitals]=useState([]),[error,setError]=useState(''),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
+  const request=useRef(null);
+  const refresh=useCallback(async()=>{try{const rows=await loadSection('emergencies',()=>getEmergencies(patientId));setItems(rows);setSelected(prev=>prev||rows[0]?.id||'');}catch(err){setError(apiError(err));}},[patientId,loadSection,apiError]);
+  useEffect(()=>{refresh();},[refresh]);
+  useEffect(()=>{if(view!=='tracking'||!selected)return;let current=true;const update=async()=>{try{const item=offlineStatus.offline?items.find(row=>row.id===selected):await getEmergency(patientId,selected);if(current&&item){setTracked(item);setError('');const rows=items.map(row=>row.id===item.id?item:row);cacheSection('emergencies',rows);}}catch(err){if(current)setError(apiError(err));}};update();const timer=setInterval(update,5000);return()=>{current=false;clearInterval(timer);};},[view,selected,patientId,offlineStatus.offline,items,cacheSection,apiError]);
+  useEffect(()=>{if(view!=='nearby'||hospitals.length||offlineStatus.offline)return;let current=true;position().then(async pos=>{if(!pos){if(current)setError('Allow location to find nearby hospitals.');return;}try{const rows=await fetchNearbyHospitals({lat:pos.latitude,lng:pos.longitude},5);if(current)setHospitals(rows);}catch{if(current)setError('Could not load hospitals. Call 108 if you need urgent help.');}});return()=>{current=false;};},[view,hospitals.length,offlineStatus.offline]);
+  const send=async()=>{setBusy(true);setError('');try{const active=items.find(row=>!['RESOLVED','CANCELLED'].includes(row.status));if(active){setSelected(active.id);setView('tracking');return;}if(offlineStatus.offline)throw new Error('You are offline. Call 108 directly for emergency assistance.');if(!request.current){const pos=await position();if(!pos)throw new Error('Location is required to send a dispatch request. You can still call 108.');request.current={key:crypto.randomUUID(),body:{...pos,description:`Patient ${profile?.name||patientId} requests emergency assistance.`}};}const item=await requestEmergency(patientId,request.current.body,request.current.key);setItems(prev=>[item,...prev.filter(row=>row.id!==item.id)]);setSelected(item.id);setTracked(item);request.current=null;setView('tracking');setMessage('Request sent. Dispatch will confirm an ambulance.');}catch(err){setError(apiError(err));}finally{setBusy(false);}};
+  const sos=()=>{window.location.href='tel:108';send();};
+  const contact=profile?.emergencyContact;
+  const stale=!tracked?.ambulance?.lastPing||Date.now()-new Date(tracked.ambulance.lastPing).getTime()>120000;
+  return <><Body className="pt-view"><PatientHeading title="Emergency help" sub="Call first. Track your response here."/><PatientViews label="Emergency views" options={[{id:'help',label:'Help'},{id:'tracking',label:'Tracking'},{id:'nearby',label:'Nearby'}]} value={view} onChange={value=>{setView(value);setError('');}}/><ErrorNote>{error}</ErrorNote>
+    {view==='help'? <section className="pt-card pt-grow pt-stack"><div className="pt-sos"><SosButton onTrigger={sos} disabled={busy}/><p>{busy?'Sending your location…':'Hold to call 108 and request dispatch assistance.'}</p></div><a className="pt-button" href="tel:108">Call 108 now</a><div className="pt-contact"><div><strong>Emergency contact</strong><p>{contact?.name||'Add someone you trust'}</p></div>{contact?.phone?<a className="pt-button-secondary" href={`tel:${contact.phone.replace(/[^+\d]/g,'')}`}>Call</a>:<Link to="/app/profile" className="pt-button-secondary">Add contact</Link>}</div></section>
+    :view==='tracking'? <section className="pt-card pt-grow pt-stack">{items.length>1&&<label className="pt-field">Request<select value={selected} onChange={e=>{setTracked(null);setSelected(e.target.value);}}>{items.map(item=><option key={item.id} value={item.id}>{new Date(item.createdAt).toLocaleString()}</option>)}</select></label>}{tracked?<><span className="pt-pill">{LABELS[tracked.status]||tracked.status}</span><div className="pt-row"><strong>{tracked.ambulance?.callSign||'No ambulance assigned yet'}</strong><span className="pt-muted">{offlineStatus.offline?'Saved status':tracked.ambulance?(stale?'GPS update pending':'GPS updating'):'Awaiting dispatch'}</span></div><AmbulanceMap emergency={tracked}/><p className="pt-muted">{tracked.ambulance?.lastPing?`Last location: ${new Date(tracked.ambulance.lastPing).toLocaleTimeString()}`:'Your request is visible to dispatch. Vehicle details appear after assignment.'}{tracked.hospital?.name?` · ${tracked.hospital.name}`:''}</p>{stale&&tracked.ambulance&&<p className="pt-muted">Location may be out of date. Call dispatch for an update.</p>}<a className="pt-button-secondary" href="tel:108">Call dispatch</a></>:<div className="pt-empty"><strong>{selected?'Loading response…':'No ambulance requests'}</strong><p>{message||'Use Help to contact emergency services.'}</p></div>}</section>
+    :<section className="pt-card pt-grow"><PatientList items={hospitals} label="Nearby hospital pages" empty={offlineStatus.offline?'Connect to find hospitals, or call 108.':'Nearby hospitals appear after location access.'} renderItem={h=><div className="pt-list-row" key={h.place_id}><div><strong>{h.name}</strong><p>{h.distKm.toFixed(1)} km away</p></div><a className="pt-text-button" target="_blank" rel="noreferrer" href={`https://www.google.com/maps/dir/?api=1&destination=${h.lat},${h.lng}`}>Directions ↗</a></div>}/></section>}
+  </Body><TabBar/></>;
 }

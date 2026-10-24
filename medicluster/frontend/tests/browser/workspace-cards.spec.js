@@ -5,7 +5,7 @@ async function previewSession(page) {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript(() => {
     localStorage.setItem('medicluster.token', 'preview-staff');
-    localStorage.setItem('medicluster.patientToken', 'preview-patient');
+    localStorage.setItem('medicluster.patientToken', `${btoa('{}')}.${btoa(JSON.stringify({sub:'preview-patient',kind:'patient',exp:Math.floor(Date.now()/1000)+3600}))}.preview`);
     localStorage.setItem('medicluster.patientId', JSON.stringify('preview-patient'));
   });
   const reminder = { _id: 'preview-reminder', patientId: 'preview-patient', medicationName: 'Demo medicine', dosage: 'As prescribed', active: true, frequency: 'daily', times: ['23:59'], doseLog: [] };
@@ -58,12 +58,11 @@ test('desktop dashboard fits the viewport and keeps Run visible across result ta
     await page.getByRole('button', { name: 'Use sample dataset', exact: true }).click();
     const run = page.getByRole('button', { name: 'Run clustering', exact: true });
     await expect(run).toBeEnabled();
-    for (const name of ['Scatter', 'Comparison', 'Dendrogram', 'Anomalies']) {
-      await page.getByRole('tab', { name, exact: true }).click();
-      await expect(run).toBeInViewport();
-      expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1)).toBe(true);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    }
+    await expect(page.getByRole('tablist', { name: 'Result views' })).toHaveCount(0);
+    await expect(page.getByRole('combobox', { name: 'Result views', exact: true })).toHaveCount(0);
+    await expect(run).toBeInViewport();
+    expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
 });
 
@@ -77,7 +76,7 @@ test('patient care cards navigate and taking a medicine still updates the dose',
   await expect(page.locator('.mc-reading-card')).toHaveCount(3);
   await page.getByRole('navigation', { name: 'Patient navigation' }).getByRole('link', { name: 'Today', exact: true }).click();
   await page.getByRole('button', { name: 'I’ve taken it', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'All done for today', exact: true })).toBeVisible();
+  await expect(page.getByText('All done for today', { exact: true })).toBeVisible();
   expect(doseRequests).toHaveLength(1);
   expect(doseRequests[0]).toMatchObject({ time: '23:59' });
   await page.getByRole('link', { name: 'Profile and settings', exact: true }).click();
