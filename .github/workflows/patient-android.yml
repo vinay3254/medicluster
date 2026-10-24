@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      PATIENT_APP_ORIGIN: https://medicluster-wiu3.onrender.com
+      PATIENT_APP_ORIGIN: https://medicluster-frontend.onrender.com
       PATIENT_VERSION_CODE: ${{ github.run_number }}
       PATIENT_VERSION_NAME: 1.0.${{ github.run_number }}
       PATIENT_KEYSTORE_PATH: ${{ github.workspace }}/../patient-release.jks

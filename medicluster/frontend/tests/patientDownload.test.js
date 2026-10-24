@@ -9,6 +9,27 @@ const bytes = await readFile(new URL('../public/downloads/medicluster-patient.ap
 const release = JSON.parse(await readFile(new URL('../public/downloads/patient-app.json', import.meta.url)));
 const apkResponse = () => new Response(bytes, { headers: { 'Content-Type': 'application/vnd.android.package-archive' } });
 
+test('Vite serves Patient and Crew APKs with Android content type and verified bytes', async t => {
+  const { createServer } = await import('vite');
+  const { fileURLToPath } = await import('node:url');
+  const vite = await createServer({
+    configFile: fileURLToPath(new URL('../vite.config.js', import.meta.url)),
+    server: { host: '127.0.0.1', port: 0 },
+  });
+  t.after(() => vite.close());
+  await vite.listen();
+  const origin = `http://127.0.0.1:${vite.httpServer.address().port}`;
+  for (const id of ['patient', 'crew']) {
+    const response = await fetch(`${origin}/downloads/medicluster-${id}.apk`, {
+      headers: { 'X-MediCluster-Installer': '1' },
+    });
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'application/vnd.android.package-archive');
+    assert.deepEqual(Buffer.from(await response.arrayBuffer()),
+      await readFile(new URL(`../public/downloads/medicluster-${id}.apk`, import.meta.url)));
+  }
+});
+
 test('rapid clicks save one APK without navigating browser', async () => {
   let resolveResponse;
   let requests = 0;

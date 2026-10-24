@@ -1,6 +1,6 @@
 plugins { id 'com.android.application' }
 
-def patientOrigin = System.getenv('PATIENT_APP_ORIGIN') ?: 'https://medicluster-wiu3.onrender.com'
+def patientOrigin = System.getenv('PATIENT_APP_ORIGIN') ?: 'https://medicluster-frontend.onrender.com'
 def origin = new URI(patientOrigin)
 if (origin.scheme != 'https' || !origin.host || origin.rawUserInfo || origin.rawQuery || origin.rawFragment || (origin.rawPath && origin.rawPath != '/') || (origin.port != -1 && origin.port != 443)) {
     throw new GradleException('PATIENT_APP_ORIGIN must be an HTTPS origin without a path or credentials')

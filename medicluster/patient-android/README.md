@@ -9,7 +9,7 @@ providers or background medicine alerts.
 
 ## Design
 
-A small native Android WebView shell loads `https://medicluster-wiu3.onrender.com/app`.
+A small native Android WebView shell loads `https://medicluster-frontend.onrender.com/app`.
 Patient routes stay in the app. Phone calls open the dialer; external HTTPS links open
 another app. Non-patient routes on the clinic origin are blocked. The frontend recognizes
 the shell's user agent to hide staff links and the desktop phone frame. This hint is for
