@@ -41,7 +41,7 @@ export default function SosButton({ onTrigger, disabled }) {
       className="relative w-[200px] h-[200px] rounded-full bg-red-500 text-white flex flex-col items-center justify-center gap-1 shadow-[0_0_0_14px_#f1d9d6] select-none touch-none disabled:opacity-60"
       style={{ WebkitTouchCallout: "none" }}
     >
-      <svg className="absolute -inset-[14px] w-[228px] h-[228px] -rotate-90 pointer-events-none" viewBox="0 0 228 228" aria-hidden="true">
+      <svg className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%+28px)] h-[calc(100%+28px)] -rotate-90 pointer-events-none" viewBox="0 0 228 228" aria-hidden="true">
         <circle cx="114" cy="114" r="107" fill="none" stroke="#a82f2a" strokeWidth="14"
           strokeDasharray={2 * Math.PI * 107} strokeDashoffset={(1 - progress) * 2 * Math.PI * 107} />
       </svg>
