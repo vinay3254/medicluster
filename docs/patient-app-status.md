@@ -16,4 +16,4 @@ No physical device is connected. Reboot/battery behavior and Google browser retu
 
 ## Live service
 
-Live frontend and backend health endpoints now return HTTP 200 with database readiness. Previous 502 was transient. Publishing tested source changes and verifying deployment is the remaining release step. No live patient data was written.
+Live frontend and backend health endpoints now return HTTP 200 with database readiness. Previous 502 was transient. Source fixes published in commit `8754789`; the live frontend serves the new clinic appointment inbox bundle. Live APK 1.0.8 was downloaded and its size, SHA-256 and reminder classes verified. Email, Google and SMS login configurations all report enabled. No live patient data was written.
