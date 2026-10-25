@@ -367,6 +367,24 @@ export async function listReadings(patientId) {
   return res.data;
 }
 
+/** Clinician-only inbox of latest clinic appointments across all patients. */
+export async function listClinicAppointments() {
+  const res = await api.get('/patient-app/appointments');
+  return res.data;
+}
+
+/** Patient appointments list for a specific patient. */
+export async function listPatientAppointments(patientId) {
+  const res = await api.get(`/patient-app/${encodeURIComponent(patientId)}/appointments`);
+  return res.data;
+}
+
+/** Update an appointment status (e.g. CONFIRMED, COMPLETED, CANCELLED) or time. */
+export async function updatePatientAppointment(patientId, appointmentId, patch) {
+  const res = await api.patch(`/patient-app/${encodeURIComponent(patientId)}/appointments/${encodeURIComponent(appointmentId)}`, patch);
+  return res.data;
+}
+
 /** Log a reading: { type: glucose|bp|weight, value, diastolic?, context? }. */
 export async function logReading(patientId, reading, idempotencyKey) {
   const res = await api.post(`/patient-app/${encodeURIComponent(patientId)}/readings`, reading, idempotencyKey ? { headers: { "Idempotency-Key": idempotencyKey } } : undefined);

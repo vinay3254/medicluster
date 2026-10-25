@@ -6,6 +6,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const defaultDist = fileURLToPath(new URL('./dist', import.meta.url));
 
 export function createFrontendApp({ backendUrl = process.env.BACKEND_URL, distDir = defaultDist } = {}) {
+  if (!backendUrl) {
+    throw new Error('BACKEND_URL environment variable is required to start the production frontend proxy server.');
+  }
   const target = new URL(backendUrl);
   if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password
       || target.pathname !== '/' || target.search || target.hash) {

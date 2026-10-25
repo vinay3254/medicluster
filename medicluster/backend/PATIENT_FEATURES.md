@@ -4,6 +4,7 @@ All paths below start with `/api/patient-app/:patientId` and require a Bearer pa
 
 ## Appointments
 
+- `GET /api/patient-app/appointments`: clinician-only clinic inbox, latest 100 by appointment time descending, including patient IDs. Patient sessions receive 403; missing sessions receive 401. Responses are private and `no-store`.
 - `GET /appointments`: latest 100 by appointment time descending.
 - `POST /appointments`: `{at,doctor,department,location,reason}`. Future `at`, nonempty doctor/location required. Maximum lengths: doctor/department 200, location 300, reason 2000. Returns 201 `{_id,patientId,at,doctor,department,location,reason,status,createdAt,updatedAt}`. Status is always `REQUESTED`; requests do not imply availability or a confirmed booking.
 - `PATCH /appointments/:id`: `{at}` reschedules and returns to `REQUESTED`; `{status:"CANCELLED"}` cancels. Only clinicians can submit `{status:"CONFIRMED"}` or complete a confirmed appointment with `{status:"COMPLETED"}`. Closed records cannot change. Concurrent changes return 409 and require refresh. Foreign record IDs return 404.
@@ -26,7 +27,7 @@ All paths below start with `/api/patient-app/:patientId` and require a Bearer pa
 
 ## Offline mutations
 
-`POST /readings` additionally accepts optional `Idempotency-Key` in the same format. Concurrent identical retries return the same record with 201; differing measurement payload with the same key returns 409. Existing reminder dose writes use the `(date,time)` slot as their atomic duplicate guard.
+`POST /readings` additionally accepts optional `Idempotency-Key` in the same format and optional `takenAt` ISO timestamp string with an explicit timezone (UTC `Z` or numeric offset) and up to three fractional second digits. Supplied timestamps are validated and preserved so offline readings keep their measurement time. Omitting `takenAt` uses the server time on first creation; retries retain that original time. Concurrent identical retries return the same record with 201; differing measurement payload or supplied timestamp with the same key returns 409. Existing reminder dose writes use the `(date,time)` slot as their atomic duplicate guard.
 
 ## Verification
 

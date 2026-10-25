@@ -83,7 +83,7 @@ router.get("/:patientId/readings", async (req, res, next) => {
 
 // ── POST /api/patient-app/:patientId/readings ─────────────────────────────
 router.post("/:patientId/readings", async (req, res, next) => {
-  const { type, value, diastolic, context } = req.body;
+  const { type, value, diastolic, context, takenAt } = req.body;
   if (!["glucose", "bp", "weight"].includes(type)) {
     return res.status(400).json({ error: "type must be glucose, bp or weight" });
   }
@@ -93,6 +93,13 @@ router.post("/:patientId/readings", async (req, res, next) => {
   if (type === "bp" && (!Number.isFinite(diastolic) || diastolic <= 0)) {
     return res.status(400).json({ error: "diastolic is required for bp" });
   }
+  if (takenAt !== undefined) {
+    const timestamp = /^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,3})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/;
+    if (typeof takenAt !== 'string' || !timestamp.test(takenAt) || !Number.isFinite(Date.parse(takenAt))
+        || new Date(`${takenAt.slice(0, 10)}T00:00:00Z`).toISOString().slice(0, 10) !== takenAt.slice(0, 10)) {
+      return res.status(400).json({ error: 'takenAt must be a valid ISO timestamp with a timezone' });
+    }
+  }
   try {
     const values = {
       patientId: req.params.patientId,
@@ -100,6 +107,7 @@ router.post("/:patientId/readings", async (req, res, next) => {
       value,
       diastolic: type === "bp" ? diastolic : null,
       context: type === "glucose" ? (context ?? "") : "",
+      ...(takenAt !== undefined ? { takenAt: new Date(takenAt) } : {}),
     };
     const key = req.get('Idempotency-Key');
     let reading;
@@ -111,7 +119,9 @@ router.post("/:patientId/readings", async (req, res, next) => {
         try { reading = await Reading.create({ _id, ...values }); }
         catch (err) { if (err.code !== 11000) throw err; reading = await Reading.findOne({ _id }); }
       }
-      if (Object.entries(values).some(([field, value]) => reading[field] !== value)) return res.status(409).json({ error: 'Idempotency-Key was already used for another reading' });
+      if (Object.entries(values).some(([field, value]) => field === 'takenAt'
+        ? new Date(reading[field]).getTime() !== value.getTime()
+        : reading[field] !== value)) return res.status(409).json({ error: 'Idempotency-Key was already used for another reading' });
     } else reading = await Reading.create(values);
     return res.status(201).json(reading);
   } catch (err) {

@@ -8,7 +8,7 @@ services:
     depends_on:
       - backend
     environment:
-      - VITE_API_BASE_URL=http://localhost:5000
+      - BACKEND_URL=http://backend:5000
 
   backend:
     build: ./backend

@@ -12,6 +12,11 @@ const router = express.Router();
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const route = fn => (req, res, next) => Promise.resolve(fn(req, res)).catch(next);
 router.use(requirePatientOrClinician);
+router.get('/appointments', route(async (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  if (req.session.kind !== 'clinician') throw fail('Clinician sign-in required', 403);
+  res.json(await Appointment.find({}).sort({ at: -1 }).limit(100).lean());
+}));
 router.use('/:patientId', (req, res, next) => {
   res.set('Cache-Control', 'private, no-store');
   return canAccessPatient(req, req.params.patientId) ? next() : res.status(403).json({ error: 'Not your record' });

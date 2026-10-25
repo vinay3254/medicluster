@@ -85,6 +85,28 @@ test('patient features preserve ownership and request lifecycles', async t => {
     assert.equal(responses[0].body.takenAt, input.takenAt);
     assert.equal((await call('/P1/readings')).body.length, 1);
     assert.equal((await call('/P1/readings', 'POST', { ...input, value: 90 }, token, headers)).status, 409);
+    assert.equal((await call('/P1/readings', 'POST', { ...input, takenAt: '2026-01-01T10:00:00Z' }, token, headers)).status, 409);
+  });
+  await t.test('reading timestamps reject invalid inputs and legacy retries keep their original server time', async () => {
+    for (const takenAt of ['bad-date', '', null, 123, {}, '2026-02-30T10:00:00Z', '2026-01-01T24:00:00Z', '2026-01-01', '123']) {
+      assert.equal((await call('/P1/readings', 'POST', { type: 'weight', value: 71, takenAt })).status, 400);
+    }
+    const headers = { 'Idempotency-Key': 'legacy-reading-1' };
+    const input = { type: 'weight', value: 72 };
+    const first = await call('/P1/readings', 'POST', input, token, headers);
+    const retry = await call('/P1/readings', 'POST', input, token, headers);
+    assert.equal(first.status, 201);
+    assert.equal(retry.status, 201);
+    assert.equal(retry.body._id, first.body._id);
+    assert.equal(retry.body.takenAt, first.body.takenAt);
+    assert.ok(Number.isFinite(Date.parse(first.body.takenAt)));
+    const offsetHeaders = { 'Idempotency-Key': 'offset-reading-1' };
+    const offset = await call('/P1/readings', 'POST', { ...input, takenAt: '2026-01-15T10:00:00+05:30' }, token, offsetHeaders);
+    assert.equal(offset.status, 201);
+    assert.equal(offset.body.takenAt, '2026-01-15T04:30:00.000Z');
+    const sameInstant = await call('/P1/readings', 'POST', { ...input, takenAt: '2026-01-15T04:30:00.000Z' }, token, offsetHeaders);
+    assert.equal(sameInstant.status, 201);
+    assert.equal(sameInstant.body._id, offset.body._id);
   });
   await t.test('CAD requests stay PENDING, concurrent retries create one incident, and tracking reads actual telemetry', async () => {
     const realFetch = global.fetch;

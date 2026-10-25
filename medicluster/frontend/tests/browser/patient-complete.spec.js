@@ -60,4 +60,90 @@ for (const [width,height] of [[390,844],[1440,1000]]) test(`patient care, report
   await page.getByRole('tab',{name:'Tracking',exact:true}).click();
   await expect(page.getByText('Alpha-1',{exact:true})).toBeVisible();
   await fits(page);
+  await page.getByRole('navigation', {name:'Patient navigation'}).getByRole('link',{name:'Care',exact:true}).click();
+  await page.getByRole('button', {name:'Reschedule',exact:true}).click();
+  await page.getByRole('button', {name:'Cancel',exact:true}).click();
+  await page.getByRole('button', {name:/Dr Rao/}).click();
+  await page.getByRole('button', {name:'Cancel visit',exact:true}).click();
+  await expect(page.getByText('Cancelled', {exact:true})).toBeVisible();
+  expect(appointments[0].status).toBe('CANCELLED');
+  await fits(page);
+});
+
+for (const [width, height] of [[390, 844], [1280, 800]]) test(`clinic staff can review and confirm patient appointments at ${width}x${height}`, async ({ page }) => {
+  await page.setViewportSize({ width, height });
+  const clinicianToken = `${btoa('{}')}.${btoa(JSON.stringify({ sub: 'clinician-1', kind: 'clinician', exp: Math.floor(Date.now() / 1000) + 3600 }))}.signature`;
+  await page.addInitScript(({ token }) => {
+    localStorage.setItem('medicluster.token', token);
+  }, { token: clinicianToken });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+
+  const appt = {
+    _id: 'visit-clinic-1',
+    patientId: 'patient-101',
+    at: '2027-02-15T09:30:00.000Z',
+    doctor: 'Dr Sharma',
+    department: 'General',
+    location: 'Clinic 1A',
+    reason: 'Annual health check',
+    status: 'REQUESTED',
+  };
+
+  await page.route(url => url.pathname.startsWith('/api/'), async route => {
+    const { pathname } = new URL(route.request().url());
+    const method = route.request().method();
+    if (pathname.endsWith('/auth/me')) {
+      return route.fulfill({ json: { user: { _id: 'clinician-1', email: 'clinician@medicluster.com', onboarded: true } } });
+    }
+    if (pathname.includes('/cluster/runs') || pathname.endsWith('/runs')) {
+      return route.fulfill({ json: { latest: { patients: [{ patient_id: 'patient-101', risk_tier: 'Low', age: 38, gender: 'F', cluster_id: 1 }] } } });
+    }
+    if (pathname.endsWith('/patient-app/appointments')) {
+      return route.fulfill({ json: [appt] });
+    }
+    if (pathname.includes('/patient-app/patient-101/appointments/visit-clinic-1')) {
+      if (method === 'PATCH') {
+        const patch = route.request().postDataJSON();
+        Object.assign(appt, patch);
+        return route.fulfill({ json: appt });
+      }
+    }
+    if (pathname.includes('/patient-app/patient-101/appointments')) {
+      return route.fulfill({ json: [appt] });
+    }
+    if (pathname.includes('/patient-app/patient-101/profile')) {
+      return route.fulfill({ json: { patientId: 'patient-101', mobile: '9876543210' } });
+    }
+    if (pathname.includes('/patient-app/patient-101/readings')) return route.fulfill({ json: [] });
+    if (pathname.includes('/reminders/patient-101') || pathname.endsWith('/reminders')) return route.fulfill({ json: [] });
+    if (pathname.includes('/media/patient/patient-101') || pathname.endsWith('/media')) return route.fulfill({ json: [] });
+    if (pathname.includes('/clusters/patient/patient-101/history')) return route.fulfill({ json: [] });
+    return route.fulfill({ json: [] });
+  });
+
+  await page.goto('/patient');
+  await page.locator('.mc-splash').click().catch(() => {});
+  await page.getByRole('button', { name: 'Clinic appointment inbox', exact: true }).click();
+  await expect(page.getByRole('heading', { name: /Clinic appointment queue/ })).toBeVisible();
+  await expect(page.getByText('patient-101')).toBeVisible();
+  await expect(page.getByText('Annual health check')).toBeVisible();
+  await expect(page.getByText('Requested', { exact: true })).toBeVisible();
+
+  // Clinician confirms the appointment from the clinic inbox
+  await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+  await expect(page.locator('.record-row').getByText('Confirmed', { exact: true })).toBeVisible();
+  expect(appt.status).toBe('CONFIRMED');
+
+  // Open the patient record and inspect the appointments tab
+  await page.getByRole('button', { name: 'Open patient ›', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'patient-101' })).toBeVisible();
+  if (width < 860) await page.getByRole('combobox', { name: 'Patient record sections', exact: true }).selectOption('appointments');
+  else await page.getByRole('tab', { name: 'Appointments', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Appointments & care requests' })).toBeVisible();
+  await expect(page.getByText('Annual health check')).toBeVisible();
+
+  // Complete the appointment from patient appointments tab
+  await page.getByRole('button', { name: 'Mark completed', exact: true }).click();
+  await expect(page.getByText('Completed', { exact: true })).toBeVisible();
+  expect(appt.status).toBe('COMPLETED');
 });

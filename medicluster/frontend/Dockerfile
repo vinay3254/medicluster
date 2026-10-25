@@ -13,10 +13,14 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-RUN npm install -g serve
+ENV NODE_ENV=production
+
+COPY package*.json ./
+RUN npm ci --omit=dev
 
 COPY --from=builder /app/dist ./dist
+COPY server.js ./
 
 EXPOSE 3000
 
-CMD ["serve", "-s", "dist", "-l", "3000"]
+CMD ["node", "server.js"]
