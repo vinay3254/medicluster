@@ -8,6 +8,7 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const { ROLES } = require("../models/User");
 const { signToken, requireAuth } = require("../middleware/auth");
+const { normEmail, staffEmails, staffAllowed } = require('../services/staffAccess');
 
 const router = express.Router();
 
@@ -18,10 +19,8 @@ const MAX_PASSWORD = 72;
 // Compared against when the email is unknown so response time doesn't reveal which accounts exist.
 const DUMMY_HASH = bcrypt.hashSync("medicluster-dummy-password", 10);
 
-const normEmail = (v) => (typeof v === "string" ? v.trim().toLowerCase() : "");
-
 // An exact-email list takes priority over domain access. With neither configured,
-// nobody can self-register. Existing accounts can still sign in.
+// nobody can self-register. An exact list also restricts existing accounts.
 function allowedDomains() {
   return (process.env.ALLOWED_EMAIL_DOMAINS || "")
     .split(",")
@@ -30,8 +29,7 @@ function allowedDomains() {
 }
 
 function canRegister(email) {
-  const exactEmails = (process.env.ALLOWED_STAFF_EMAILS || '')
-    .split(',').map(normEmail).filter(Boolean);
+  const exactEmails = staffEmails();
   return exactEmails.length > 0
     ? exactEmails.includes(email)
     : allowedDomains().includes(email.split('@')[1]);
@@ -76,6 +74,7 @@ router.post("/login", async (req, res, next) => {
     if (!email || typeof password !== "string") {
       return res.status(400).json({ error: "Enter your email and password" });
     }
+    if (!staffAllowed(email)) return res.status(403).json({ error: "This account isn't enabled for clinician access" });
 
     const user = await User.findOne({ email }).select("+passwordHash");
     const ok = await bcrypt.compare(password, user ? user.passwordHash : DUMMY_HASH);

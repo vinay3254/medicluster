@@ -1,5 +1,9 @@
 /* Every dashboard view shares the remaining viewport, including populated results. */
 .mc-dashboard-page .mc-workspace-page-content { overflow: hidden; gap: 12px; }
+.mc-dashboard-clustering { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; min-width: 0; }
+.mc-dashboard-actions { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.mc-dashboard-overview { display: flex; flex-direction: column; gap: 24px; flex: 1; min-height: 0; overflow: auto; padding-bottom: 4px; }
+.mc-dashboard-overview > * { flex-shrink: 0; }
 .mc-dashboard-page .mc-dashboard-paged { display: grid; grid-template-columns: 264px minmax(0,1fr); grid-template-rows: minmax(0,1fr); flex: 1 1 0; min-height: 0; min-width: 0; gap: 18px; }
 .mc-dashboard-page :is(.mc-dashboard-setup,.mc-dashboard-panes) { display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: visible; }
 .mc-dashboard-page .mc-screen-views { flex: 1 1 0; min-height: 0; min-width: 0; }
@@ -103,10 +107,9 @@
 .mc-active-algorithm { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #62675e; }
 .mc-data-notes summary { list-style: none; cursor: pointer; border: 1px solid #d7dacf; border-radius: 99px; padding: 10px 16px; font-size: 12px; color: #62675e; }
 .mc-data-notes summary::-webkit-details-marker { display: none; }
-.mc-data-notes > div { position: absolute; z-index: 30; top: 120px; right: 30px; width: min(360px,calc(100% - 36px)); padding: 18px; border: 1px solid #e3d9c8; border-radius: 18px; background: #faf3e8; box-shadow: 0 12px 30px #17221d12; font-size: 12px; line-height: 1.7; }
+.mc-data-notes > div { position: absolute; z-index: 30; top: calc(100% + 8px); right: 0; width: min(360px,calc(100vw - 36px)); padding: 18px; border: 1px solid #e3d9c8; border-radius: 18px; background: #faf3e8; box-shadow: 0 12px 30px #17221d12; font-size: 12px; line-height: 1.7; }
 .mc-data-notes p + p { margin-top: 8px; }
 @media(max-width:859px) {
   .mc-dashboard-page .mc-view-controls { display: none; }
   .mc-dashboard-page .mc-dashboard-panes > .mc-screen-views > .mc-view-controls + .mc-screen-view-select { display: block; }
-  .mc-data-notes > div { top: 135px; right: 18px; }
 }

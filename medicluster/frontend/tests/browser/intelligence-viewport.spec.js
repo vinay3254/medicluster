@@ -6,7 +6,7 @@ const session = { id:'synthetic-session', patientId:'synthetic', source:'demo', 
 async function setup(page) {
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.addInitScript(()=>localStorage.setItem('medicluster.token','synthetic-preview'));
- await page.route('**/api/**',async route=>{
+ await page.route(url=>url.pathname.startsWith('/api/'),async route=>{
   const url=new URL(route.request().url()), path=url.pathname; let json=[];
   if(path==='/api/auth/me')json={user:{id:'synthetic',name:'Synthetic clinician',onboarded:true}};
   if(path==='/api/health/ml')json={online:true};
@@ -41,15 +41,16 @@ for(const viewport of [{width:1280,height:720},{width:1920,height:1080},{width:3
  test(`Brain task views fit ${viewport.width}×${viewport.height} and preserve slice geometry`,async({page})=>{
   await setup(page);await page.setViewportSize(viewport);await page.goto('/brain-explorer');
   await expect(page.getByRole('dialog',{name:'Starting MediCluster'})).toBeHidden();
-  await page.getByLabel('Open study',{exact:true}).selectOption(study.id);
+  await page.getByRole('combobox',{name:/^Open study/}).selectOption(study.id);
   for(const view of ['library','spatial','slices','prompts','measurement','classify','compare','info']) {
    await page.getByRole('combobox',{name:'Brain workspace'}).selectOption(view);
    await fits(page);
    if(view==='spatial')await expect(page.locator('.intel-mesh')).toBeInViewport({ratio:1});
    if(view==='slices') {
     await expect(page.getByAltText(/axial MRI/)).toBeVisible();
-    const frames=await page.locator('.intel-slice-frame').evaluateAll(nodes=>nodes.map(n=>({ratio:n.getBoundingClientRect().width/n.getBoundingClientRect().height,expected:Number(n.style.aspectRatio)})));
-    for(const frame of frames)expect(Math.abs(frame.ratio-frame.expected)).toBeLessThan(.02);
+    const frames=await page.locator('.intel-slice-frame').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().width/n.getBoundingClientRect().height));
+    // Fixture physical extents are 24 x 60 x 60 mm, independent of CSS serialization.
+    for(const [index,expected] of [.4,.4,1].entries())expect(Math.abs(frames[index]-expected)).toBeLessThan(.02);
     await page.getByRole('button',{name:/Add prompt point/}).click();
    }
    if(view==='prompts') {await expect(page.getByRole('button',{name:'Segment candidate lesion'})).toBeEnabled();await page.getByRole('button',{name:'Next points'}).click();await fits(page);}

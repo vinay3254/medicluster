@@ -783,7 +783,7 @@ Provide a concise, direct, and supportive response (around 2 to 3 short paragrap
         mediaType: primaryImage.mediaType,
         maxTokens: 4096,
         bypassAgentRouter: true,
-        customCandidates: [{ name: "minimax-m3:cloud" }, { name: "gemma4:31b-cloud" }],
+        customCandidates: [{ name: process.env.OLLAMA_VISION_MODEL || "gemma4:cloud" }],
         bypassOmniRoute: true
       });
       const enrichedReply = await enrichReplyWithHospitals(reply, location, {
@@ -877,7 +877,7 @@ When analyzing a medical image, structure your response with these exact section
         mediaType,
         maxTokens: 4096,
         bypassAgentRouter: true,
-        customCandidates: [{ name: "minimax-m3:cloud" }, { name: "gemma4:31b-cloud" }],
+        customCandidates: [{ name: process.env.OLLAMA_VISION_MODEL || "gemma4:cloud" }],
         bypassOmniRoute: true
       });
       const enrichedReply = await enrichReplyWithHospitals(reply, location);

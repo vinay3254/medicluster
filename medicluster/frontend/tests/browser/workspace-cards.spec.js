@@ -33,7 +33,7 @@ test('clinician overview excludes promotions and mobile navigation closes after 
   await previewSession(page);
   await page.goto('/');
   await expect(page.getByRole('dialog', { name: 'Starting MediCluster' })).toBeHidden();
-  await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
   await expect(page.locator('.mc-clinical-hero')).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Clinical workspaces' })).toHaveCount(0);
   await page.getByRole('navigation', { name: 'Main', exact: true }).getByRole('link', { name: 'Imaging', exact: true }).click();
@@ -54,6 +54,7 @@ test('desktop dashboard fits the viewport and keeps Run visible across result ta
     await page.goto('/dashboard');
     await expect(page.getByRole('dialog', { name: 'Starting MediCluster' })).toBeHidden();
     await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
+    await page.getByRole('tablist', { name: 'Dashboard views', exact: true }).getByRole('tab', { name: 'Clustering', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'Search patient ID or page' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Use sample dataset', exact: true }).click();
     const run = page.getByRole('button', { name: 'Run clustering', exact: true });
@@ -73,7 +74,9 @@ test('patient care cards navigate and taking a medicine still updates the dose',
   await expect(page.getByRole('dialog', { name: 'Starting MediCluster' })).toBeHidden();
   await page.getByRole('navigation', { name: 'Your care shortcuts' }).getByRole('link', { name: /My health/ }).click();
   await expect(page.getByRole('heading', { name: 'My health', exact: true })).toBeVisible();
-  await expect(page.locator('.mc-reading-card')).toHaveCount(3);
+  for (const name of ['Blood sugar', 'Blood pressure', 'Weight']) {
+    await expect(page.getByRole('region', { name: 'Latest readings', exact: true }).getByText(name, { exact: true })).toBeVisible();
+  }
   await page.getByRole('navigation', { name: 'Patient navigation' }).getByRole('link', { name: 'Today', exact: true }).click();
   await page.getByRole('button', { name: 'I’ve taken it', exact: true }).click();
   await expect(page.getByText('All done for today', { exact: true })).toBeVisible();
@@ -90,6 +93,7 @@ test('dashboard PDF includes content beyond the visible results panel', async ({
   await page.route(url => url.pathname === '/api/cluster', route => route.fulfill({ json: { all: {} } }));
   await page.goto('/dashboard');
   await expect(page.getByRole('dialog', { name: 'Starting MediCluster' })).toBeHidden();
+  await page.getByRole('tablist', { name: 'Dashboard views', exact: true }).getByRole('tab', { name: 'Clustering', exact: true }).click();
   await page.getByRole('button', { name: 'Use sample dataset', exact: true }).click();
   await page.getByRole('radio', { name: 'Compare all', exact: true }).click();
   await page.getByRole('button', { name: 'Run clustering', exact: true }).click();

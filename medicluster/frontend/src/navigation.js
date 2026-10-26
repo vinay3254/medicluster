@@ -8,15 +8,13 @@ export const DISPATCH_URL = import.meta.env.VITE_DISPATCH_URL || (
 // Clinician app sections, in sidebar order. Numbers ("01", "02", …) follow this order.
 export const NAV_GROUPS = [
   { label: "Overview", items: [
-    { to: "/",          label: "Home" },
-    { to: "/alerts",    label: "Alerts" },
     { to: "/dashboard", label: "Dashboard" },
+    { to: "/alerts",    label: "Alerts" },
   ] },
   { label: "Analyze", items: [
     { to: "/imaging",  label: "Imaging" },
     { to: "/brain-explorer", label: "3D Tumor Explorer" },
     { to: "/deterioration-radar", label: "Deterioration Radar" },
-    { to: "/predict",  label: "Predict" },
     { to: "/ml-tools", label: "ML Tools" },
   ] },
   { label: "Patients", items: [

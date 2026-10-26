@@ -4,6 +4,8 @@
  */
 
 const jwt = require("jsonwebtoken");
+const User = require('../models/User');
+const { staffEmails, staffAllowed } = require('../services/staffAccess');
 
 const TOKEN_TTL = "12h";
 
@@ -44,22 +46,36 @@ function readSession(req) {
 }
 
 // Clinician-only APIs. Patient tokens are rejected.
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   let session;
   try { session = readSession(req); } catch (err) { return next(err); }
   if (!session) return res.status(401).json({ error: "Sign in required" });
   if (session.kind !== "clinician") return res.status(403).json({ error: "Clinician sign-in required" });
+  try {
+    if (!await allowedClinicianSession(session)) return res.status(403).json({ error: "This account isn't enabled for clinician access" });
+  } catch (err) { return next(err); }
   req.userId = session.userId;
   return next();
 }
 
 // Clinicians, or the signed-in patient. Use canAccessPatient(req, id) to check a specific record.
-function requirePatientOrClinician(req, res, next) {
+async function requirePatientOrClinician(req, res, next) {
   let session;
   try { session = readSession(req); } catch (err) { return next(err); }
   if (!session) return res.status(401).json({ error: "Sign in required" });
+  try {
+    if (session.kind === 'clinician' && !await allowedClinicianSession(session)) {
+      return res.status(403).json({ error: "This account isn't enabled for clinician access" });
+    }
+  } catch (err) { return next(err); }
   req.session = session;
   return next();
+}
+
+async function allowedClinicianSession(session) {
+  if (staffEmails().length === 0) return true;
+  const user = await User.findById(session.userId).select('email');
+  return Boolean(user && staffAllowed(user.email));
 }
 
 const canAccessPatient = (req, patientId) =>

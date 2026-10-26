@@ -37,7 +37,7 @@ export default function SosButton({ onTrigger, disabled }) {
       onKeyDown={(e) => { if (holdKey(e)) { e.preventDefault(); begin(); } }}
       onKeyUp={(e) => { if (e.key === " " || e.key === "Enter") stop(); }}
       onContextMenu={(e) => e.preventDefault()}
-      aria-label="SOS. Press and hold for 3 seconds to call an ambulance"
+      aria-label="SOS. Press and hold for 3 seconds to request an ambulance"
       className="relative w-[200px] h-[200px] rounded-full bg-red-500 text-white flex flex-col items-center justify-center gap-1 shadow-[0_0_0_14px_#f1d9d6] select-none touch-none disabled:opacity-60"
       style={{ WebkitTouchCallout: "none" }}
     >

@@ -1,13 +1,11 @@
 import React, { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import AppShell from "./components/AppShell";
-import HomePage from "./pages/HomePage";
 import AlertsPage from "./pages/AlertsPage";
 import ReportsPage from "./pages/ReportsPage";
 import DashboardPage from "./pages/DashboardPage";
 import ResultsPage from "./pages/ResultsPage";
 import ImagingPage from "./pages/ImagingPage";
-import PredictPage from "./pages/PredictPage";
 import PatientPage from "./pages/PatientPage";
 import RemindersPage from "./pages/RemindersPage";
 import AskAIPage from "./pages/AskAIPage";
@@ -23,14 +21,14 @@ export default function ClinicalWorkspace() {
       <AppShell>
         <Suspense fallback={<p className="p-8">Loading workspace…</p>}>
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/alerts" element={<AlertsPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/imaging" element={<ImagingPage />} />
           <Route path="/brain-explorer" element={<BrainExplorerPage />} />
           <Route path="/deterioration-radar" element={<DeteriorationRadarPage />} />
           <Route path="/results/:id" element={<ResultsPage />} />
-          <Route path="/predict" element={<PredictPage />} />
+          <Route path="/predict" element={<Navigate to="/dashboard" replace />} />
           <Route path="/patient" element={<PatientPage />} />
           <Route path="/patient/:patientId" element={<PatientPage />} />
           <Route path="/reminders" element={<RemindersPage />} />

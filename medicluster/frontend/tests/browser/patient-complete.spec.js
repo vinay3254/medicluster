@@ -147,3 +147,29 @@ for (const [width, height] of [[390, 844], [1280, 800]]) test(`clinic staff can 
   await expect(page.getByText('Completed', { exact: true })).toBeVisible();
   expect(appt.status).toBe('COMPLETED');
 });
+
+test('holding SOS requests dispatch without opening phone dialer', async ({ page, context }) => {
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude: 12.98, longitude: 77.6 });
+  await session(page);
+  const calls = [];
+  const emergency = { id: 'sos-new', status: 'PENDING', createdAt: new Date().toISOString(), location: { latitude: 12.98, longitude: 77.6 } };
+  await page.route('**/api/patient-app/*/emergencies**', async route => {
+    const request = route.request();
+    if (request.method() === 'POST') calls.push({ body: request.postDataJSON(), key: request.headers()['idempotency-key'] });
+    const detail = new URL(request.url()).pathname.endsWith('/sos-new');
+    await route.fulfill({ json: request.method() === 'POST' || detail ? emergency : [] });
+  });
+  const navigationRequests = [];
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('Page.enable');
+  cdp.on('Page.frameRequestedNavigation', event => navigationRequests.push(event.url));
+  await page.goto('/app/emergency');
+  await expect(page.getByRole('link', { name: 'Call 108 now', exact: true })).toHaveAttribute('href', 'tel:108');
+  await page.getByRole('button', { name: /^SOS\./ }).press('Space', { delay: 3300 });
+  await expect(page.getByText('Waiting for dispatch', { exact: true })).toBeVisible();
+  expect(calls).toHaveLength(1);
+  expect(calls[0].body).toMatchObject({ latitude: 12.98, longitude: 77.6 });
+  expect(calls[0].key).toBeTruthy();
+  expect(navigationRequests.filter(url => url.startsWith('tel:'))).toEqual([]);
+});

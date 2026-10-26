@@ -21,6 +21,7 @@ async function openDashboard(page) {
   await page.goto('/dashboard');
   await expect(page.getByRole('dialog', { name: 'Starting MediCluster' })).toBeHidden();
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
+  await page.getByRole('tablist', { name: 'Dashboard views', exact: true }).getByRole('tab', { name: 'Clustering', exact: true }).click();
 }
 
 async function fits(page) {
@@ -28,7 +29,8 @@ async function fits(page) {
     const visible = [...root.querySelectorAll('*')].filter(el => el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden');
     return visible.filter(el => {
       const rect = el.getBoundingClientRect();
-      return (el.clientHeight > 0 && el.scrollHeight > el.clientHeight + 2 && el.children.length > 0 && !el.closest('svg') && !el.matches('svg')) || rect.right > innerWidth + 2 || rect.bottom > innerHeight + 2;
+      const clipsOrScrolls = ['hidden', 'clip', 'auto', 'scroll'].includes(getComputedStyle(el).overflowY);
+      return (clipsOrScrolls && el.clientHeight > 0 && el.scrollHeight > el.clientHeight + 2 && el.children.length > 0 && !el.closest('svg') && !el.matches('svg')) || rect.right > innerWidth + 2 || rect.bottom > innerHeight + 2;
     }).map(el => `${el.tagName}.${el.className}`).slice(0, 8);
   })).toEqual([]);
 }

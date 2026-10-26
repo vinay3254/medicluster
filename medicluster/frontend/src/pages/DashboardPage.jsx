@@ -4,7 +4,8 @@ import UploadPanel        from "../components/UploadPanel";
 import AlgorithmSelector  from "../components/AlgorithmSelector";
 import ClusterScatterPlot from "../components/ClusterScatterPlot";
 import RiskBars           from "../components/RiskBars";
-import { Page, Tag } from "../components/ui";
+import { Page, Tag, Segmented } from "../components/ui";
+import DashboardOverview from "../components/DashboardOverview";
 import MetricsPanel       from "../components/MetricsPanel";
 import PatientTable       from "../components/PatientTable";
 import ComparisonPanel    from "../components/ComparisonPanel";
@@ -170,6 +171,7 @@ function EmptyState() {
 export default function DashboardPage() {
   // Onboarding hands over the dataset it just uploaded.
   const { state: navState } = useLocation();
+  const [dashboardView, setDashboardView] = useState(navState?.dataset ? "clustering" : "overview");
   const [setupView, setSetupView] = useState("dataset");
   const [workspaceView, setWorkspaceView] = useState("setup");
   const [dataset,         setDataset]         = useState(navState?.dataset ?? null);
@@ -280,12 +282,18 @@ export default function DashboardPage() {
     <Page
       title="Dashboard"
       className="mc-dashboard-page"
-      sub="Configure a dataset and algorithm, run clustering, and inspect the resulting risk tiers."
-      actions={<>
-        {warnings.length > 0 && <details className="mc-data-notes"><summary>Data notes ({warnings.length})</summary><div role="status">{warnings.map(warning => <p key={warning}>{warning}</p>)}</div></details>}
-        {hasResults && <button type="button" onClick={exportPdf} className="btn-secondary text-sm h-9">Export PDF</button>}
-      </>}
+      sub={dashboardView === "overview" ? "Review population risk, critical patients, and recent clustering runs." : "Configure a dataset and algorithm, run clustering, and inspect the resulting risk tiers."}
+      actions={<div className="mc-dashboard-actions">
+        <Segmented label="Dashboard views" value={dashboardView} onChange={setDashboardView} options={[
+          { value: "overview", label: "Overview" },
+          { value: "clustering", label: "Clustering" },
+        ]} />
+        {dashboardView === "clustering" && warnings.length > 0 && <details className="mc-data-notes"><summary>Data notes ({warnings.length})</summary><div role="status">{warnings.map(warning => <p key={warning}>{warning}</p>)}</div></details>}
+        {dashboardView === "clustering" && hasResults && <button type="button" onClick={exportPdf} className="btn-secondary text-sm h-9">Export PDF</button>}
+      </div>}
     >
+      {dashboardView === "overview" && <DashboardOverview />}
+      <div className="mc-dashboard-clustering" hidden={dashboardView !== "clustering"}>
       {error && (
         <div role="alert" className="flex justify-between gap-4 px-4 py-3 border border-risk-critical text-red-700 text-[13px]">
           <span>{error}</span>
@@ -329,6 +337,7 @@ export default function DashboardPage() {
           onClose={() => setSelectedPatient(null)}
         />
       )}
+      </div>
     </Page>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { flagReason as reason, loadLatestRuns as loadOverview, runId, runLabel, when } from "../data/clinical";
-import { Page, Section, Tag, linkCls } from "../components/ui";
+import { Section, Tag, linkCls } from "./ui";
 
 const TIERS = [
   { name: "Low",      bar: "bg-risk-low" },
@@ -131,7 +131,7 @@ function GettingStarted() {
   );
 }
 
-export default function HomePage() {
+export default function DashboardOverview() {
   const [state, setState] = useState({ status: "loading" });
 
   useEffect(() => {
@@ -149,12 +149,7 @@ export default function HomePage() {
   const hasRuns = status === "ready" && runs.length > 0;
 
   return (
-    <Page
-        title="Overview"
-        sub={hasRuns
-          ? `Population risk from the latest clustering run, ${runId(latest)}.`
-          : "Population risk from your clustering runs."}
-    >
+    <section className="mc-dashboard-overview" aria-label="Population overview">
 
       {status === "loading" && <p className="text-sm text-slate-500" aria-busy="true">Loading latest run…</p>}
       {status === "error" && <p role="alert" className="text-sm text-red-600">{error}</p>}
@@ -168,6 +163,6 @@ export default function HomePage() {
           </div>
         </>
       )}
-    </Page>
+    </section>
   );
 }
