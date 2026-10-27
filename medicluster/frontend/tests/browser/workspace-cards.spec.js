@@ -152,6 +152,7 @@ test('CliniQ fills its workspace and keeps the composer visible through a long c
   await page.goto('/ask-ai');
   await expect(page.getByRole('dialog', { name: 'Starting MediCluster' })).toBeHidden();
   await expect(page.locator('.mc-cliniq-category')).toHaveCount(4);
+  expect(await page.locator('.mc-cliniq-shell').evaluate(element => element.getBoundingClientRect().top)).toBeLessThan(80);
   const widths = await page.locator('.mc-cliniq-shell').evaluate(element => ({ panel: element.getBoundingClientRect().width, available: element.parentElement.clientWidth }));
   expect(Math.abs(widths.panel - widths.available)).toBeLessThan(2);
   await page.getByRole('combobox', { name: 'Reply language', exact: true }).selectOption('kn');

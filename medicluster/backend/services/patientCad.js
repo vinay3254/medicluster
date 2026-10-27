@@ -8,7 +8,7 @@ const incidentColumns = 'id,status,created_at,updated_at,location_lat,location_l
 async function ensureIncident(row) {
   await query('incidents?on_conflict=id&select=id', {
     method: 'POST', headers: { 'content-type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=representation' },
-    body: JSON.stringify({ id: row.incidentId, incident_type: 'Medical emergency', severity: 'HIGH', status: 'PENDING', location_address: 'Patient shared GPS location', location_lat: row.latitude, location_lng: row.longitude, description: row.description, is_sos: true, patients_count: 1 }),
+    body: JSON.stringify({ id: row.incidentId, incident_type: 'Medical emergency', severity: 'HIGH', status: 'PENDING', location_address: 'Patient shared pickup location', location_lat: row.latitude, location_lng: row.longitude, description: row.description, is_sos: true, patients_count: 1 }),
   });
 }
 async function track(row) {
@@ -26,4 +26,16 @@ async function track(row) {
   }
   return { id: incident.id, status: incident.status, createdAt: incident.created_at, updatedAt: incident.updated_at, location: { latitude: incident.location_lat, longitude: incident.location_lng }, ambulance, hospital };
 }
-module.exports = { ensureIncident, track };
+async function correctLocation(row, { latitude, longitude, locationAddress }) {
+  const update = { location_lat: latitude, location_lng: longitude };
+  if (locationAddress !== undefined) update.location_address = locationAddress;
+  // Dispatch assignment and status must still permit the move at write time.
+  const changed = await query(`incidents?id=eq.${encodeURIComponent(row.incidentId)}&status=eq.PENDING&assigned_ambulance_id=is.null&select=id`, {
+    method: 'PATCH', headers: { 'content-type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify(update),
+  });
+  if (!Array.isArray(changed)) throw unavailable('Emergency dispatch service unavailable');
+  if (!changed.length) throw Object.assign(new Error('This emergency can no longer be moved; call dispatch to correct your location'), { status: 409 });
+  return track(row);
+}
+module.exports = { ensureIncident, track, correctLocation };

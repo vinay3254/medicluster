@@ -4,9 +4,9 @@ import { useAuth } from "../auth/AuthContext";
 import { getMlHealth } from "../api/apiClient";
 import { NAV_GROUPS, NAV_ITEMS, isActive } from "../navigation";
 import Logo from "./Logo";
-import { Bell, ChartNoAxesCombined, ScanLine, Brain, Activity, FlaskConical, Users, CalendarClock, FileText, MessageCircle, Sparkles, Hospital, Radio, Menu as MenuIcon } from "lucide-react";
+import { Bell, ChartNoAxesCombined, ScanLine, Brain, Activity, Users, CalendarClock, FileText, MessageCircle, Sparkles, Hospital, Radio, Menu as MenuIcon } from "lucide-react";
 
-const NAV_ICONS = { Alerts: Bell, Dashboard: ChartNoAxesCombined, Imaging: ScanLine, "3D Tumor Explorer": Brain, "Deterioration Radar": Activity, "ML Tools": FlaskConical, Patients: Users, Reminders: CalendarClock, Reports: FileText, CliniQ: MessageCircle, "Clinical AI": Sparkles, Hospitals: Hospital, Dispatch: Radio };
+const NAV_ICONS = { Alerts: Bell, Dashboard: ChartNoAxesCombined, Imaging: ScanLine, "3D Tumor Explorer": Brain, "Deterioration Radar": Activity, Patients: Users, Reminders: CalendarClock, Reports: FileText, CliniQ: MessageCircle, "Clinical AI": Sparkles, Hospitals: Hospital, Dispatch: Radio };
 
 const ML_POLL_MS = 30_000;
 

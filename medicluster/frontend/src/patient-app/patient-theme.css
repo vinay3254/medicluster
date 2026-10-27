@@ -97,3 +97,5 @@
 .pt-tracking-pin span { display:grid; place-items:center; width:26px; height:26px; border:2px solid #fff; border-radius:50%; background:#476c51; color:#fff; font-size:19px; }
 .pt-tracking-pin.origin span { background:#ad633f; }
 .pt-tracking-pin.hospital span { background:#71845f; }
+
+.pt-location-search { min-width:0; width:100%; flex:1; border:1px solid #d5dfcc; border-radius:18px; padding:10px 12px; font:inherit; font-size:12px; background:#fbfcf9; }

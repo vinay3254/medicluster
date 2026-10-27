@@ -17,10 +17,10 @@ export function PageHeader({ title, sub }) {
   );
 }
 
-export function Page({ title, sub, actions, children, className = "" }) {
+export function Page({ title, sub, actions, children, className = "", hideHeader = false }) {
   return (
     <div className={`mc-workspace-page px-4 min-[860px]:px-10 pt-5 min-[860px]:pt-9 pb-16 flex flex-col gap-8 min-w-0 ${className}`}>
-      <div className="mc-workspace-page-header flex flex-wrap items-end justify-between gap-4">
+      <div className={hideHeader ? "sr-only" : "mc-workspace-page-header flex flex-wrap items-end justify-between gap-4"}>
         <PageHeader title={title} sub={sub} />
         {actions && <div className="flex flex-wrap items-center gap-2.5">{actions}</div>}
       </div>

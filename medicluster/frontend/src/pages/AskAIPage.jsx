@@ -250,6 +250,7 @@ export default function AskAIPage() {
   return (
     <Page
       title="CliniQ"
+      hideHeader
       className="mc-cliniq-page"
       sub="Chat about symptoms or share a medical image — get condition, prevention, treatment & medications."
     >

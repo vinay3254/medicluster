@@ -108,10 +108,11 @@ test('patient features preserve ownership and request lifecycles', async t => {
     assert.equal(sameInstant.status, 201);
     assert.equal(sameInstant.body._id, offset.body._id);
   });
-  await t.test('CAD requests stay PENDING, concurrent retries create one incident, and tracking reads actual telemetry', async () => {
+  await t.test('CAD requests stay PENDING, concurrent retries create one incident, and tracking reads actual telemetry', async cadTest => {
     const realFetch = global.fetch;
     const incidents = new Map(); const writes = [];
-    let unavailable = false;
+    let unavailable = false; let patchFailure = false; let race = null;
+    const patches = [];
     const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
     const mocked = t.mock.method(global, 'fetch', async (url, options = {}) => {
       const parsed = new URL(url);
@@ -125,6 +126,19 @@ test('patient features preserve ownership and request lifecycles', async t => {
         assert.equal(new Headers(options.headers).get('prefer'), 'resolution=ignore-duplicates,return=representation');
         if (!incidents.has(body.id)) incidents.set(body.id, { ...body, created_at: '2026-10-24T12:00:00Z', updated_at: '2026-10-24T12:00:00Z' });
         return json([incidents.get(body.id)]);
+      }
+      if (parsed.pathname === '/rest/v1/incidents' && options.method === 'PATCH') {
+        const body = JSON.parse(options.body); patches.push(body);
+        assert.equal(parsed.searchParams.get('status'), 'eq.PENDING');
+        assert.equal(parsed.searchParams.get('assigned_ambulance_id'), 'is.null');
+        assert.equal(new Headers(options.headers).get('prefer'), 'return=representation');
+        assert.deepEqual(Object.keys(body).sort(), Object.hasOwn(body, 'location_address') ? ['location_address', 'location_lat', 'location_lng'] : ['location_lat', 'location_lng']);
+        if (patchFailure) return json({ message: 'private provider error' }, 503);
+        const incident = incidents.get(parsed.searchParams.get('id').slice(3));
+        if (race) { Object.assign(incident, race); race = null; }
+        if (!incident || incident.status !== 'PENDING' || incident.assigned_ambulance_id != null) return json([]);
+        Object.assign(incident, body);
+        return json([incident]);
       }
       if (parsed.pathname === '/rest/v1/incidents') return json([incidents.get(parsed.searchParams.get('id').slice(3))].filter(Boolean));
       if (parsed.pathname === '/rest/v1/ambulances') return json([{ call_sign: 'FIXTURE-1', latitude: 12.9, longitude: 77.4, last_ping: '2026-10-24T12:01:00Z' }]);
@@ -141,6 +155,54 @@ test('patient features preserve ownership and request lifecycles', async t => {
       const id = responses[0].body.id;
       assert.equal((await call(`/P2/emergencies/${id}`, 'GET', undefined, signPatientToken('P2'))).status, 404);
       assert.equal((await call('/P1/emergencies', 'POST', { ...input, latitude: 13 }, token, headers)).status, 409);
+      await cadTest.test('SOS corrections validate ownership and coordinates without writing CAD', async () => {
+        const path = `/P1/emergencies/${id}/location`;
+        const point = { latitude: 13.17, longitude: 77.56 };
+        assert.equal((await call(path, 'PATCH', point, null)).status, 401);
+        assert.equal((await call(`/P2/emergencies/${id}/location`, 'PATCH', point)).status, 403);
+        assert.equal((await call(`/P2/emergencies/${id}/location`, 'PATCH', point, signPatientToken('P2'))).status, 404);
+        assert.equal((await call('/P1/emergencies/missing/location', 'PATCH', point)).status, 404);
+        for (const invalid of [{}, { latitude: null, longitude: 77 }, { latitude: '13', longitude: 77 }, { latitude: 91, longitude: 77 }, { latitude: 13, longitude: -181 }, { latitude: 13 }, { ...point, locationAddress: 42 }, { ...point, locationAddress: 'x'.repeat(301) }]) {
+          assert.equal((await call(path, 'PATCH', invalid)).status, 400);
+        }
+        assert.equal(patches.length, 0);
+      });
+      await cadTest.test('SOS correction changes canonical pending location and preserves original retry identity', async () => {
+        const corrected = await call(`/P1/emergencies/${id}/location`, 'PATCH', { latitude: 13.17, longitude: 77.56, locationAddress: '  Rajanukunte  ' });
+        assert.equal(corrected.status, 200);
+        assert.deepEqual(corrected.body.location, { latitude: 13.17, longitude: 77.56 });
+        assert.equal(corrected.body.id, id); assert.equal(corrected.body.status, 'PENDING');
+        assert.equal(incidents.get(id).location_address, 'Rajanukunte');
+        const retried = await call('/P1/emergencies', 'POST', input, token, headers);
+        assert.equal(retried.status, 201);
+        assert.deepEqual(retried.body.location, corrected.body.location);
+        const noAddress = await call(`/P1/emergencies/${id}/location`, 'PATCH', { latitude: 13.18, longitude: 77.57 });
+        assert.equal(noAddress.status, 200);
+        assert.equal(incidents.get(id).location_address, 'Rajanukunte');
+      });
+      await cadTest.test('SOS correction cannot move assigned, closed or concurrently assigned incidents', async () => {
+        const path = `/P1/emergencies/${id}/location`;
+        for (const state of [{ status: 'PENDING', assigned_ambulance_id: 'A1' }, { status: 'CLOSED', assigned_ambulance_id: null }]) {
+          Object.assign(incidents.get(id), state);
+          const rejected = await call(path, 'PATCH', { latitude: 14, longitude: 78 });
+          assert.equal(rejected.status, 409); assert.match(rejected.body.error, /dispatch/i);
+          assert.equal(incidents.get(id).location_lat, 13.18);
+        }
+        for (const change of [{ assigned_ambulance_id: 'A1' }, { status: 'CLOSED' }]) {
+          Object.assign(incidents.get(id), { status: 'PENDING', assigned_ambulance_id: null });
+          race = change;
+          assert.equal((await call(path, 'PATCH', { latitude: 14, longitude: 78 })).status, 409);
+          assert.equal(incidents.get(id).location_lat, 13.18);
+        }
+        Object.assign(incidents.get(id), { status: 'PENDING', assigned_ambulance_id: null });
+      });
+      await cadTest.test('failed CAD corrections never return success or expose provider details', async () => {
+        patchFailure = true;
+        const failed = await call(`/P1/emergencies/${id}/location`, 'PATCH', { latitude: 14, longitude: 78 });
+        patchFailure = false;
+        assert.equal(failed.status, 503); assert.equal(failed.body.error.includes('private provider'), false);
+        assert.equal(incidents.get(id).location_lat, 13.18);
+      });
       Object.assign(incidents.get(id), { status: 'EN_ROUTE_TO_SCENE', assigned_ambulance_id: 'A1', assigned_hospital_id: 'H1' });
       const tracked = (await call(`/P1/emergencies/${id}`)).body;
       assert.equal(tracked.status, 'EN_ROUTE_TO_SCENE');

@@ -15,7 +15,6 @@ export const NAV_GROUPS = [
     { to: "/imaging",  label: "Imaging" },
     { to: "/brain-explorer", label: "3D Tumor Explorer" },
     { to: "/deterioration-radar", label: "Deterioration Radar" },
-    { to: "/ml-tools", label: "ML Tools" },
   ] },
   { label: "Patients", items: [
     { to: "/patient",   label: "Patients" },

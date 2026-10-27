@@ -165,6 +165,7 @@ test('holding SOS requests dispatch without opening phone dialer', async ({ page
   await cdp.send('Page.enable');
   cdp.on('Page.frameRequestedNavigation', event => navigationRequests.push(event.url));
   await page.goto('/app/emergency');
+  await expect(page.getByRole('dialog', { name: 'Starting MediCluster' })).toBeHidden();
   await expect(page.getByRole('link', { name: 'Call 108 now', exact: true })).toHaveAttribute('href', 'tel:108');
   await page.getByRole('button', { name: /^SOS\./ }).press('Space', { delay: 3300 });
   await expect(page.getByText('Waiting for dispatch', { exact: true })).toBeVisible();
@@ -172,4 +173,107 @@ test('holding SOS requests dispatch without opening phone dialer', async ({ page
   expect(calls[0].body).toMatchObject({ latitude: 12.98, longitude: 77.6 });
   expect(calls[0].key).toBeTruthy();
   expect(navigationRequests.filter(url => url.startsWith('tel:'))).toEqual([]);
+});
+
+test('patient confirms exact map pin before correcting a pending SOS location', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await session(page);
+  const calls = [];
+  const emergency = { id: 'sos-location', status: 'PENDING', createdAt: new Date().toISOString(), location: { latitude: 12.9466, longitude: 77.6208 }, ambulance: null };
+  await page.route('**/api/patient-app/*/emergencies**', async route => {
+    const request = route.request(), path = new URL(request.url()).pathname;
+    if (request.method() === 'PATCH') {
+      const body = request.postDataJSON(); calls.push({ path, body });
+      emergency.location = { latitude: body.latitude, longitude: body.longitude };
+    }
+    await route.fulfill({ json: path.endsWith('/emergencies') ? [emergency] : emergency });
+  });
+  await page.route('https://nominatim.openstreetmap.org/**', route => route.fulfill({ json: [{ lat: '13.1691299', lon: '77.5599986', display_name: 'Rajanukunte, Bengaluru' }] }));
+  await page.goto('/app/emergency');
+  await expect(page.getByRole('dialog', { name: 'Starting MediCluster' })).toBeHidden();
+  await page.getByRole('tab', { name: 'Tracking', exact: true }).click();
+  await page.getByRole('button', { name: 'Correct location', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Area or landmark', exact: true }).fill('Rajanukunte');
+  await page.getByRole('button', { name: 'Find area', exact: true }).click();
+  await expect(page.getByText('13.169130, 77.559999', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Confirm location', exact: true })).toBeDisabled();
+  expect(calls).toHaveLength(0);
+  await page.getByLabel('Choose exact SOS pickup location on map', { exact: true }).click({ position: { x: 80, y: 80 } });
+  await page.getByRole('button', { name: 'Confirm location', exact: true }).click();
+  await expect(page.getByText('Waiting for dispatch', { exact: true })).toBeVisible();
+  expect(calls).toHaveLength(1);
+  expect(calls[0].path).toContain('/sos-location/location');
+  expect(calls[0].body.latitude).toBeGreaterThan(13.16);
+  expect(calls[0].body.latitude).toBeLessThan(13.18);
+  expect(calls[0].body.longitude).toBeGreaterThan(77.55);
+  expect(calls[0].body.longitude).toBeLessThan(77.57);
+  expect(calls[0].body.locationAddress).toContain('Rajanukunte');
+  await fits(page);
+});
+
+test('new SOS uses confirmed map pin when browser location is unavailable', async ({ page }) => {
+  await session(page);
+  await page.addInitScript(() => {
+    window.gpsCalls = 0;
+    navigator.geolocation.getCurrentPosition = (_success, failure) => { window.gpsCalls++; failure({ code: 1 }); };
+  });
+  const calls = [];
+  let emergency;
+  await page.route('**/api/patient-app/*/emergencies**', async route => {
+    const request = route.request(), path = new URL(request.url()).pathname;
+    if (request.method() === 'POST') {
+      const body = request.postDataJSON(); calls.push(body);
+      emergency = { id: 'sos-manual', status: 'PENDING', createdAt: new Date().toISOString(), location: { latitude: body.latitude, longitude: body.longitude }, ambulance: null };
+    }
+    await route.fulfill({ json: path.endsWith('/emergencies') && request.method() === 'GET' ? [] : emergency });
+  });
+  await page.route('https://nominatim.openstreetmap.org/**', route => route.fulfill({ json: [{ lat: '13.1691299', lon: '77.5599986', display_name: 'Rajanukunte, Bengaluru' }] }));
+  await page.goto('/app/emergency');
+  await expect(page.getByRole('dialog', { name: 'Starting MediCluster' })).toBeHidden();
+  await page.getByRole('tab', { name: 'Location', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Area or landmark', exact: true }).fill('Rajanukunte');
+  await page.getByRole('button', { name: 'Find area', exact: true }).click();
+  await expect(page.getByText('13.169130, 77.559999', { exact: true })).toBeVisible();
+  await page.getByLabel('Choose exact SOS pickup location on map', { exact: true }).click({ position: { x: 80, y: 80 } });
+  await page.getByRole('button', { name: 'Confirm location', exact: true }).click();
+  await expect(page.getByText('SOS will use your confirmed map pin.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: /^SOS\./ }).press('Space', { delay: 3300 });
+  await expect(page.getByText('Waiting for dispatch', { exact: true })).toBeVisible();
+  expect(calls).toHaveLength(1);
+  expect(calls[0].latitude).toBeGreaterThan(13.16);
+  expect(calls[0].longitude).toBeLessThan(77.57);
+  expect(await page.evaluate(() => window.gpsCalls)).toBe(0);
+});
+
+test('correcting location recovers a lost SOS response with the original retry key', async ({ page, context }) => {
+  await context.grantPermissions(['geolocation']);
+  await context.setGeolocation({ latitude: 12.98, longitude: 77.6 });
+  await session(page);
+  const posts = [], corrections = [];
+  let emergency;
+  await page.route('**/api/patient-app/*/emergencies**', async route => {
+    const request = route.request(), path = new URL(request.url()).pathname;
+    if (request.method() === 'POST') {
+      posts.push({ body: request.postDataJSON(), key: request.headers()['idempotency-key'] });
+      emergency ||= { id: 'sos-recovered', status: 'PENDING', createdAt: new Date().toISOString(), location: { latitude: 12.98, longitude: 77.6 }, ambulance: null };
+      if (posts.length === 1) return route.abort('failed');
+    }
+    if (request.method() === 'PATCH') {
+      corrections.push(request.postDataJSON());
+      emergency.location = { latitude: corrections[0].latitude, longitude: corrections[0].longitude };
+    }
+    return route.fulfill({ json: path.endsWith('/emergencies') && request.method() === 'GET' ? [] : emergency });
+  });
+  await page.goto('/app/emergency');
+  await expect(page.getByRole('dialog', { name: 'Starting MediCluster' })).toBeHidden();
+  await page.getByRole('button', { name: /^SOS\./ }).press('Space', { delay: 3300 });
+  await expect.poll(() => posts.length).toBe(1);
+  await expect(page.getByRole('alert')).toBeVisible();
+  await page.getByRole('tab', { name: 'Location', exact: true }).click();
+  await page.getByLabel('Choose exact SOS pickup location on map', { exact: true }).click({ position: { x: 80, y: 80 } });
+  await page.getByRole('button', { name: 'Confirm location', exact: true }).click();
+  await expect(page.getByText('Waiting for dispatch', { exact: true })).toBeVisible();
+  expect(posts).toHaveLength(2);
+  expect(posts[1]).toEqual(posts[0]);
+  expect(corrections).toHaveLength(1);
 });

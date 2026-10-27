@@ -3,31 +3,9 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { MapPin, Navigation, Search, Hospital, ArrowUpRight } from 'lucide-react';
 import { fetchNearbyHospitals } from '../api/nearbyHospitals';
+import { geocodeLocation } from '../api/geocoding';
 import { Page } from '../components/ui';
 import './NearbyHospitalsPage.css';
-
-// Runtime override supports switching to a hosted/self-managed Nominatim-compatible service.
-const geocodeCache = new Map();
-let lastGeocodeAt = 0;
-
-async function geocodeLocation(query) {
-  const key = query.toLowerCase();
-  if (geocodeCache.has(key)) return geocodeCache.get(key);
-  const scheduledAt = Math.max(Date.now(), lastGeocodeAt + 1100);
-  lastGeocodeAt = scheduledAt;
-  await new Promise(resolve => setTimeout(resolve, Math.max(0, scheduledAt - Date.now())));
-  const endpoint = window.MEDICLUSTER_GEOCODING_URL || 'https://nominatim.openstreetmap.org/search';
-  const url = new URL(endpoint, window.location.origin);
-  url.searchParams.set('format', 'jsonv2');
-  url.searchParams.set('limit', '1');
-  url.searchParams.set('q', query);
-  const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
-  if (!response.ok) throw new Error('geocoding');
-  const results = await response.json();
-  if (geocodeCache.size >= 50) geocodeCache.delete(geocodeCache.keys().next().value);
-  geocodeCache.set(key, results);
-  return results;
-}
 
 const DEFAULT_CENTER = [20.5937, 78.9629];
 const directionsUrl = h => `https://www.google.com/maps/dir/?api=1&destination=${h.lat},${h.lng}`;
@@ -156,8 +134,10 @@ export default function NearbyHospitalsPage() {
     setGeoLoading(true); setError('');
     navigator.geolocation.getCurrentPosition(position => {
       setGeoLoading(false);
-      fetchHospitals({ lat: position.coords.latitude, lng: position.coords.longitude }, radius, 'Your current location');
-    }, () => { setGeoLoading(false); setError('Location access was unavailable. Search for a city or address instead.'); }, { timeout: 15000 });
+      const accuracy = position.coords.accuracy;
+      const label = Number.isFinite(accuracy) ? `Your current location · accuracy about ${Math.round(accuracy)} m` : 'Your current location';
+      fetchHospitals({ lat: position.coords.latitude, lng: position.coords.longitude }, radius, label);
+    }, () => { setGeoLoading(false); setError('Location access was unavailable. Search for a city or address instead.'); }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
   }
 
   const pages = Math.max(1, Math.ceil(hospitals.length / pageSize));
@@ -190,7 +170,7 @@ export default function NearbyHospitalsPage() {
             {loading ? <div className="mc-hospital-empty" role="status"><span className="mc-hospital-icon"><Search size={24} /></span><h3>Finding nearby care…</h3><p>Searching OpenStreetMap hospitals and clinics.</p></div> : hospitals.length ? <ul aria-label="Nearby hospitals">{visible.map(h => <li key={h.place_id} className={selectedId === h.place_id ? 'is-selected' : ''}>
               <button className="mc-hospital-select" type="button" aria-pressed={selectedId === h.place_id} onClick={() => selectHospital(h)}><span className="mc-hospital-name" title={h.name}>{h.name}</span><span className="mc-hospital-meta">{h.isHospital ? 'Hospital' : 'Clinic'} · {h.distKm.toFixed(1)} km {h.emergency ? '· Emergency' : ''}</span></button>
               <div className="mc-hospital-details"><span title={h.address}>{h.address || 'Address not listed'}{h.phone ? ` · ${h.phone}` : ''}</span><a href={directionsUrl(h)} target="_blank" rel="noopener noreferrer" aria-label={`Directions to ${h.name}`}>Directions <ArrowUpRight size={13} /></a></div>
-            </li>)}</ul> : <div className="mc-hospital-empty" role="status"><span className="mc-hospital-icon"><Hospital size={26} /></span><h3>{center ? 'No places found' : 'A little closer to care'}</h3><p>{center ? `Try a larger radius than ${radius} km, or choose another location.` : 'Search a location to see hospitals and clinics, ordered by distance.'}</p></div>}
+            </li>)}</ul> : <div className="mc-hospital-empty" role="status"><span className="mc-hospital-icon"><Hospital size={26} /></span><h3>{error ? 'Search unavailable' : center ? 'No places found' : 'A little closer to care'}</h3><p>{error || (center ? `Try a larger radius than ${radius} km, or choose another location.` : 'Search a location to see hospitals and clinics, ordered by distance.')}</p></div>}
           </div>
           <nav className="mc-hospital-pagination" aria-label="Hospital result pages"><button type="button" disabled={!hospitals.length || currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous</button><span aria-live="polite">{hospitals.length ? `${currentPage + 1} of ${pages}` : 'No results yet'}</span><button type="button" disabled={!hospitals.length || currentPage + 1 >= pages} onClick={() => setPage(currentPage + 1)}>Next</button></nav>
           <p className="mc-hospital-data-note">OpenStreetMap listings · Contact the facility to confirm services.</p>

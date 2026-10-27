@@ -112,6 +112,15 @@ router.get('/:patientId/emergencies', route(async (req, res) => {
   const rows = await Emergency.find({ patientId: req.params.patientId }).sort({ createdAt: -1 }).limit(20).lean();
   res.json(await Promise.all(rows.map(row => cad.track(row))));
 }));
+router.patch('/:patientId/emergencies/:id/location', route(async (req, res) => {
+  const { latitude, longitude } = req.body;
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) throw fail('Valid latitude and longitude are required');
+  const locationAddress = req.body.locationAddress === undefined ? undefined : text(req.body.locationAddress, 'locationAddress', 300);
+  const row = await Emergency.findOne({ patientId: req.params.patientId, incidentId: req.params.id }).lean();
+  if (!row) throw fail('Emergency not found', 404);
+  // Preserve the original association payload for idempotent SOS retries.
+  res.json(await cad.correctLocation(row, { latitude, longitude, locationAddress }));
+}));
 router.get('/:patientId/emergencies/:id', route(async (req, res) => {
   const row = await Emergency.findOne({ patientId: req.params.patientId, incidentId: req.params.id }).lean();
   if (!row) throw fail('Emergency not found', 404);

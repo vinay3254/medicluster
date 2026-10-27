@@ -9,7 +9,6 @@ import ImagingPage from "./pages/ImagingPage";
 import PatientPage from "./pages/PatientPage";
 import RemindersPage from "./pages/RemindersPage";
 import AskAIPage from "./pages/AskAIPage";
-import MLToolsPage from "./pages/MLToolsPage";
 import NearbyHospitalsPage from "./pages/NearbyHospitalsPage";
 import ClinicalAIPage from "./pages/ClinicalAIPage";
 
@@ -35,7 +34,7 @@ export default function ClinicalWorkspace() {
           <Route path="/reminders/:patientId" element={<RemindersPage />} />
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/ask-ai" element={<AskAIPage />} />
-          <Route path="/ml-tools" element={<MLToolsPage />} />
+          <Route path="/ml-tools" element={<Navigate to="/dashboard" replace />} />
           <Route path="/hospitals" element={<NearbyHospitalsPage />} />
           <Route path="/clinical-ai" element={<ClinicalAIPage />} />
         </Routes>

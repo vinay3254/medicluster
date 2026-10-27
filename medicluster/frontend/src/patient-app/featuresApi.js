@@ -11,3 +11,4 @@ export const getDocumentLink = async (id, documentId, download = false) => (awai
 export const getEmergencies = async id => (await api.get(`${base(id)}/emergencies`)).data;
 export const requestEmergency = async (id, body, key) => (await api.post(`${base(id)}/emergencies`, body, { headers: { 'Idempotency-Key': key } })).data;
 export const getEmergency = async (id, emergencyId) => (await api.get(`${base(id)}/emergencies/${encodeURIComponent(emergencyId)}`)).data;
+export const correctEmergencyLocation = async (id, emergencyId, body) => (await api.patch(`${base(id)}/emergencies/${encodeURIComponent(emergencyId)}/location`, body)).data;
